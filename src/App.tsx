@@ -51,6 +51,7 @@ function compareTodoOrder(
     return left.createdAt - right.createdAt
   }
 
+  // DESC: plus récents en premier
   return right.createdAt - left.createdAt
 }
 

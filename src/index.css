@@ -131,6 +131,41 @@
   }
 }
 
+/* Custom orange color (#ff4d00) to replace amber/yellow */
+@layer utilities {
+  .bg-orange-custom {
+    background-color: #ff4d00;
+  }
+  .bg-orange-custom\/15 {
+    background-color: rgba(255, 77, 0, 0.15);
+  }
+  .bg-orange-custom\/10 {
+    background-color: rgba(255, 77, 0, 0.10);
+  }
+  .bg-orange-custom\/5 {
+    background-color: rgba(255, 77, 0, 0.05);
+  }
+  .text-orange-custom {
+    color: #ff4d00;
+  }
+  .text-orange-light {
+    color: #ff8547;
+  }
+  .text-orange-dark {
+    color: #cc3d00;
+  }
+  .border-orange-custom {
+    border-color: #ff4d00;
+  }
+  .border-orange-custom\/30 {
+    border-color: rgba(255, 77, 0, 0.30);
+  }
+  .hover\:bg-orange-custom\/10:hover {
+    background-color: rgba(255, 77, 0, 0.10);
+  }
+}
+
+
 /* Tauri specific styles */
 html,
 body,

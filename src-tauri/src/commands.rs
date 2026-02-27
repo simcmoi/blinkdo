@@ -283,12 +283,6 @@ pub fn set_window_width(app: AppHandle, width: f64) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-pub fn set_overlay_visor_effect(app: AppHandle, enabled: bool) -> Result<(), String> {
-    window::set_overlay_visor_effect(&app, enabled)
-        .map_err(|error| format!("failed to set visor effect: {error}"))
-}
-
 
 #[tauri::command]
 pub fn get_log_file_path(app: AppHandle) -> Result<String, String> {

@@ -98,7 +98,6 @@ const defaultSettings: Settings = {
     onDelete: true,
   },
   language: 'auto',
-  enableOverlayBlur: false,
 }
 
 // Récupérer le mode de stockage depuis localStorage (par défaut: local)
@@ -260,7 +259,15 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
           onCreate: true,
           onComplete: true,
           onDelete: true,
-        }
+        },
+        // Migration: convertir les labels 'amber' en 'orange'
+        labels: data.settings.labels.map(label => {
+          const color = label.color as string
+          return {
+            ...label,
+            color: color === 'amber' ? 'orange' : label.color
+          }
+        }) as typeof data.settings.labels
       }
       
       set({

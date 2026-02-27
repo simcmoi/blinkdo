@@ -27,7 +27,7 @@ import { useWindowBehavior } from '@/hooks/use-window-behavior'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useTodoStore } from '@/store/use-todo-store'
 import { useUpdateStore } from '@/store/use-update-store'
-import { setWindowWidth, setOverlayVisorEffect, isOverlayWindow } from '@/lib/tauri'
+import { setWindowWidth, isOverlayWindow } from '@/lib/tauri'
 import { cn } from '@/lib/utils'
 import type { SortMode, Todo, TodoPriority } from '@/types/todo'
 
@@ -216,36 +216,6 @@ export default function App() {
     
     void initializeWindowWidth()
   }, [hydrated]) // Only run on hydration, not when settingsPageOpen changes
-
-  // Apply overlay visor effect when enableOverlayBlur setting changes
-  useEffect(() => {
-    const applyVisorEffect = async () => {
-      if (!hydrated || !isOverlayWindow()) return
-      
-      try {
-        await setOverlayVisorEffect(settings.enableOverlayBlur)
-      } catch (error) {
-        console.error('Failed to apply visor effect:', error)
-      }
-    }
-    
-    void applyVisorEffect()
-  }, [hydrated, settings.enableOverlayBlur])
-
-  // Listen for data-reset event from backend
-  useEffect(() => {
-    const applyVisorEffect = async () => {
-      if (!hydrated || !isOverlayWindow()) return
-      
-      try {
-        await setOverlayVisorEffect(settings.enableOverlayBlur)
-      } catch (error) {
-        console.error('Failed to apply visor effect:', error)
-      }
-    }
-    
-    void applyVisorEffect()
-  }, [hydrated, settings.enableOverlayBlur])
 
   // Listen for data-reset event from backend
   useEffect(() => {
@@ -904,19 +874,29 @@ export default function App() {
         </div>
 
         {/* Footer - Background distinct */}
-        <div className="flex items-center justify-between gap-2 border-t border-border bg-muted/30 px-4 py-2 text-[11px] text-muted-foreground">
-          <p>
-            {error ? `Erreur: ${error}` : `${settings.globalShortcut} pour afficher/masquer · Tri: ${selectedSortModeLabel}`}
-          </p>
-          <button
-            onClick={() => {
-              void open('https://github.com/simcmoi/blinkdo')
-            }}
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-          >
-            <Star className="h-3 w-3" />
-            <span>Star on GitHub</span>
-          </button>
+        <div className="border-t border-border bg-muted/30 px-4 py-2 text-[11px] text-muted-foreground">
+          {error ? (
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-destructive">Erreur: {error}</p>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="font-medium">{settings.globalShortcut}</span>
+                <span className="text-muted-foreground/60">·</span>
+                <span>Tri: {selectedSortModeLabel}</span>
+              </div>
+              <button
+                onClick={() => {
+                  void open('https://github.com/simcmoi/blinkdo')
+                }}
+                className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <Star className="h-3 w-3" />
+                <span>Star on GitHub</span>
+              </button>
+            </div>
+          )}
         </div>
       </motion.section>
       <Toaster />

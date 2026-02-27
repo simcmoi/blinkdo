@@ -101,8 +101,6 @@
     "invalidShortcut": "Raccourci invalide",
     "enableAutostart": "Démarrer au lancement du système",
     "enableAutostartTooltip": "Lance automatiquement l'application en arrière-plan au démarrage de votre ordinateur. L'overlay reste accessible via le raccourci clavier.",
-    "enableOverlayBlur": "Effet verre dépoli (overlay)",
-    "enableOverlayBlurTooltip": "Applique un magnifique effet de verre dépoli à la fenêtre overlay avec transparence et vibrance. macOS uniquement.",
     "enableSoundEffects": "Activer les effets sonores",
     "enableSoundEffectsTooltip": "Joue des sons subtils lors de la création, complétion ou suppression de tâches pour un retour audio agréable.",
     "soundOnCreate": "Son à la création",
@@ -157,7 +155,7 @@
       "slate": "Ardoise",
       "blue": "Bleu",
       "green": "Vert",
-      "amber": "Ambre",
+      "orange": "Orange",
       "rose": "Rose",
       "violet": "Violet"
     },

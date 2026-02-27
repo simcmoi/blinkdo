@@ -6,7 +6,7 @@ export type TodoPriority = 'none' | 'low' | 'medium' | 'high' | 'urgent'
 export type TodoLabel = {
   id: string
   name: string
-  color: 'slate' | 'blue' | 'green' | 'amber' | 'rose' | 'violet'
+  color: 'slate' | 'blue' | 'green' | 'orange' | 'rose' | 'violet'
 }
 
 export type TodoListMeta = {
@@ -51,7 +51,6 @@ export type Settings = {
   enableSoundEffects: boolean // Deprecated - kept for backward compatibility
   soundSettings: SoundSettings
   language: string
-  enableOverlayBlur: boolean // Blur effect around overlay window (macOS only)
 }
 
 export type AppData = {

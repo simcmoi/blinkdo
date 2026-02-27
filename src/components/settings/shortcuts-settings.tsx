@@ -183,11 +183,11 @@ export function ShortcutsSettings({
         {shortcutError ? <p className="text-xs text-destructive">{shortcutError}</p> : null}
         
         {/* macOS fullscreen limitation info */}
-        <div className="mt-3 flex flex-col gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3">
+        <div className="mt-3 flex flex-col gap-2 rounded-md border border-orange-custom/30 bg-orange-custom/5 p-3">
           <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-500 mt-0.5" />
+            <Info className="h-4 w-4 shrink-0 text-orange-custom dark:text-orange-light mt-0.5" />
             <div className="flex-1 space-y-1 text-xs">
-              <p className="font-medium text-yellow-700 dark:text-yellow-400">
+              <p className="font-medium text-orange-dark dark:text-orange-light">
                 {t('settings.fullscreenLimitationTitle')}
               </p>
               <p className="text-muted-foreground">
@@ -199,7 +199,7 @@ export function ShortcutsSettings({
             type="button"
             size="sm"
             variant="outline"
-            className="h-7 w-full text-xs border-yellow-500/30 hover:bg-yellow-500/10"
+            className="h-7 w-full text-xs border-orange-custom/30 hover:bg-orange-custom/10"
             onClick={() => {
               void openAccessibilitySettings()
             }}

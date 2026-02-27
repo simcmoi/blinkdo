@@ -34,7 +34,7 @@ export function LabelsSettings({
     { value: 'slate', label: t('settings.colors.slate') },
     { value: 'blue', label: t('settings.colors.blue') },
     { value: 'green', label: t('settings.colors.green') },
-    { value: 'amber', label: t('settings.colors.amber') },
+    { value: 'orange', label: t('settings.colors.orange') },
     { value: 'rose', label: t('settings.colors.rose') },
     { value: 'violet', label: t('settings.colors.violet') },
   ]
@@ -99,7 +99,7 @@ export function LabelsSettings({
               label.color === 'slate' && 'bg-slate-500/15 text-slate-700 border-slate-700/30 dark:text-slate-300 dark:border-slate-500/30',
               label.color === 'blue' && 'bg-blue-500/15 text-blue-600 border-blue-600/30 dark:text-blue-300 dark:border-blue-400/30',
               label.color === 'green' && 'bg-green-500/15 text-green-600 border-green-600/30 dark:text-green-300 dark:border-green-500/30',
-              label.color === 'amber' && 'bg-amber-500/15 text-amber-700 border-amber-700/30 dark:text-amber-300 dark:border-amber-500/30',
+              label.color === 'orange' && 'bg-orange-custom/15 text-orange-dark border-orange-custom/30 dark:text-orange-light dark:border-orange-custom/30',
               label.color === 'rose' && 'bg-rose-500/15 text-rose-700 border-rose-700/30 dark:text-rose-300 dark:border-rose-500/30',
               label.color === 'violet' && 'bg-violet-500/15 text-violet-700 border-violet-700/30 dark:text-violet-300 dark:border-violet-500/30',
             )} />

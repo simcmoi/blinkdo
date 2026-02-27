@@ -905,7 +905,6 @@ export class CloudStorageProvider implements StorageProvider {
         onDelete: true,
       },
       language: dbSettings.language || 'auto',
-      enableOverlayBlur: false, // Cloud storage doesn't sync this setting (device-specific)
     }
   }
   
@@ -936,7 +935,6 @@ export class CloudStorageProvider implements StorageProvider {
         onDelete: true,
       },
       language: 'auto',
-      enableOverlayBlur: false,
     }
   }
   

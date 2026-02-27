@@ -198,10 +198,6 @@ export async function setWindowWidth(width: number): Promise<void> {
   await invoke('set_window_width', { width })
 }
 
-export async function setOverlayVisorEffect(enabled: boolean): Promise<void> {
-  await invoke('set_overlay_visor_effect', { enabled })
-}
-
 export function isOverlayWindow(): boolean {
   const currentWindow = getCurrentWindow()
   return currentWindow.label === 'overlay'

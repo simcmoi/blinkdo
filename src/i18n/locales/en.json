@@ -117,8 +117,6 @@
     "invalidShortcut": "Invalid shortcut",
     "enableAutostart": "Start at system launch",
     "enableAutostartTooltip": "Automatically launches the app in the background when your computer starts. The overlay remains accessible via the keyboard shortcut.",
-    "enableOverlayBlur": "Frosted glass effect (overlay)",
-    "enableOverlayBlurTooltip": "Applies a beautiful frosted glass effect to the overlay window with vibrancy and transparency. macOS only.",
     "enableSoundEffects": "Enable sound effects",
     "enableSoundEffectsTooltip": "Plays subtle sounds when creating, completing or deleting tasks for pleasant audio feedback.",
     "soundOnCreate": "Sound on create",
@@ -173,7 +171,7 @@
       "slate": "Slate",
       "blue": "Blue",
       "green": "Green",
-      "amber": "Amber",
+      "orange": "Orange",
       "rose": "Rose",
       "violet": "Violet"
     }

@@ -72,23 +72,6 @@ export function GeneralSettings({
         <div className="flex items-center justify-between gap-3">
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-xs text-muted-foreground cursor-help">{t('settings.enableOverlayBlur')}</span>
-            </TooltipTrigger>
-            <TooltipContent side="left" className="max-w-xs">
-              <p>{t('settings.enableOverlayBlurTooltip')}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Switch
-            checked={settings.enableOverlayBlur}
-            onCheckedChange={async (checked) => {
-              await onUpdateSettings({ enableOverlayBlur: checked })
-            }}
-          />
-        </div>
-        
-        <div className="flex items-center justify-between gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
               <span className="text-xs text-muted-foreground cursor-help">{t('settings.enableSoundEffects')}</span>
             </TooltipTrigger>
             <TooltipContent side="left" className="max-w-xs">

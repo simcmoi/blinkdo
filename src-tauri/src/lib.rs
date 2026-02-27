@@ -118,7 +118,6 @@ pub fn run() {
             commands::open_log_file,
             commands::reset_all_data,
             commands::set_window_width,
-            commands::set_overlay_visor_effect,
             changelog::get_changelog,
             updater::check_for_update,
             updater::install_update,

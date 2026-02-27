@@ -43,10 +43,13 @@ function compareTodoOrder(
     return (left.sortIndex ?? 0) - (right.sortIndex ?? 0)
   }
 
+  // Si une tâche a un sortIndex et l'autre non:
+  // Les tâches SANS sortIndex (nouvelles) viennent EN PREMIER
   if (leftHasManualOrder !== rightHasManualOrder) {
-    return leftHasManualOrder ? -1 : 1
+    return leftHasManualOrder ? 1 : -1
   }
 
+  // ASC: plus anciens en premier
   if (sortOrder === 'asc') {
     return left.createdAt - right.createdAt
   }

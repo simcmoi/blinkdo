@@ -81,7 +81,7 @@ type TodoStore = {
 }
 
 const defaultSettings: Settings = {
-  sortMode: 'recent',
+  sortMode: 'manual',
   sortOrder: 'desc',
   autoCloseOnBlur: true,
   globalShortcut: 'Shift+Space',

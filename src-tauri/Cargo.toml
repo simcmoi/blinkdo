@@ -31,7 +31,7 @@ tauri-plugin-global-shortcut = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-shell = "2"
-uuid = { version = "1.18.1", features = ["v4", "fast-rng"] }
+uuid = { version = "1.22.0", features = ["v4", "fast-rng"] }
 reqwest = { version = "0.13", features = ["json"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]

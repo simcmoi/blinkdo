@@ -32,12 +32,18 @@ pub fn replace_registered_shortcut(
     shortcut: &str,
 ) -> Result<(), tauri_plugin_global_shortcut::Error> {
     let normalized = normalize_shortcut(shortcut);
-    app.global_shortcut().unregister_all()?;
+    let gs = app.global_shortcut();
+
+    gs.unregister_all()?;
 
     match attach_shortcut(app, &normalized) {
         Ok(()) => Ok(()),
         Err(error) => {
             if normalized != DEFAULT_GLOBAL_SHORTCUT {
+                log::warn!(
+                    "failed to register global shortcut '{}', falling back to '{}'",
+                    normalized, DEFAULT_GLOBAL_SHORTCUT
+                );
                 if let Err(fallback_error) = attach_shortcut(app, DEFAULT_GLOBAL_SHORTCUT) {
                     log::error!(
                         "failed to register fallback global shortcut {}: {fallback_error}",
@@ -45,7 +51,6 @@ pub fn replace_registered_shortcut(
                     );
                 }
             }
-
             Err(error)
         }
     }

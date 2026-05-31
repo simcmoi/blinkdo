@@ -25,21 +25,22 @@ type DailyStats = {
 }
 
 export function StatisticsPage({ todos, onBack }: StatisticsPageProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [currentTime] = useState(() => Date.now())
+
+  const locale = i18n.language === 'auto' ? 'fr-FR' : i18n.language
 
   const stats = useMemo(() => {
     const now = currentTime
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000
 
-    // Créer un tableau des 30 derniers jours
     const dailyStatsMap = new Map<string, DailyStats>()
     for (let i = 29; i >= 0; i--) {
       const date = new Date(now - i * 24 * 60 * 60 * 1000)
       const dateStr = date.toISOString().split('T')[0]
       dailyStatsMap.set(dateStr, {
         date: dateStr,
-        dateFormatted: date.toLocaleDateString('fr-FR', {
+        dateFormatted: date.toLocaleDateString(locale, {
           day: '2-digit',
           month: '2-digit',
         }),
@@ -91,7 +92,7 @@ export function StatisticsPage({ todos, onBack }: StatisticsPageProps) {
       createdLast7Days,
       completedLast7Days,
     }
-  }, [todos, currentTime])
+  }, [todos, currentTime, locale])
 
   const chartConfig = {
     created: {

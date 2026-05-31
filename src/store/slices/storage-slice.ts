@@ -7,6 +7,8 @@ type Set = (state: Record<string, unknown> | ((prev: Record<string, unknown>) =>
 type Get = () => Record<string, unknown>
 
 export function createStorageSlice(set: Set, get: Get) {
+  let unsubscribe: (() => void) | null = null
+
   return {
     setStorageMode: async (mode: StorageMode) => {
       const targetMode = !ENABLE_CLOUD_FEATURES ? 'local' : mode
@@ -24,6 +26,7 @@ export function createStorageSlice(set: Set, get: Get) {
     },
 
     hydrate: async () => {
+      if ((get() as { loading: boolean }).loading) return
       set({ loading: true, error: null })
       try {
         let provider: StorageProvider | null = (get() as { storageProvider: StorageProvider | null }).storageProvider
@@ -44,7 +47,7 @@ export function createStorageSlice(set: Set, get: Get) {
             onComplete: true,
             onDelete: true,
           },
-          labels: data.settings.labels.map((label) => ({
+          labels: (data.settings.labels ?? []).map((label) => ({
             ...label,
             color: (label.color as string) === 'amber' ? 'orange' : label.color,
           })) as typeof data.settings.labels,
@@ -53,7 +56,8 @@ export function createStorageSlice(set: Set, get: Get) {
         set({ hydrated: true, loading: false, todos: data.todos, settings, syncStatus: provider.getSyncStatus() })
 
         if (provider.mode === 'cloud' && provider.isAuthenticated()) {
-          provider.subscribe((updatedData: unknown) => {
+          if (unsubscribe) unsubscribe()
+          unsubscribe = provider.subscribe((updatedData: unknown) => {
             set({
               todos: (updatedData as { todos: Todo[] }).todos,
               settings: (updatedData as { settings: Settings }).settings,

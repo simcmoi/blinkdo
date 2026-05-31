@@ -676,7 +676,7 @@ export function TodoList({
                           >
                             <Checkbox
                               className="mt-0.5"
-                              checked={Boolean(todo.completedAt)}
+                              checked={typeof todo.completedAt === 'number'}
                               onCheckedChange={async (checked) => {
                                 if (checked === true) {
                                   await onSetCompleted(todo.id, true)

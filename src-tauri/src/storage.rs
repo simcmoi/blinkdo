@@ -193,7 +193,13 @@ impl AppState {
     }
 
     pub fn snapshot(&self) -> AppData {
-        self.data.lock().expect("todo state lock poisoned").clone()
+        match self.data.lock() {
+            Ok(guard) => guard.clone(),
+            Err(poisoned) => {
+                log::warn!("todo state lock was poisoned, recovering");
+                poisoned.into_inner().clone()
+            }
+        }
     }
 }
 
@@ -423,7 +429,7 @@ pub fn load_or_create(app: &AppHandle) -> Result<AppData, String> {
     let data = db::load(&conn).map_err(|e| format!("failed to load from database: {e}"))?;
 
     // If empty, initialize with defaults
-    if data.settings.lists.is_empty() || data.todos.is_empty() && data.settings.lists.is_empty() {
+    if data.settings.lists.is_empty() || data.todos.is_empty() {
         let default_data = AppData::default();
         db::save(&conn, &default_data)
             .map_err(|e| format!("failed to save defaults: {e}"))?;
@@ -440,8 +446,11 @@ pub fn persist(app: &AppHandle, data: &AppData) -> Result<(), String> {
 }
 
 pub fn now_millis() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("system time drifted before unix epoch")
-        .as_millis() as i64
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => duration.as_millis() as i64,
+        Err(_) => {
+            log::warn!("system time before unix epoch, using 0");
+            0
+        }
+    }
 }

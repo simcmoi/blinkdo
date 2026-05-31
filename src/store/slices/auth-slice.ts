@@ -43,7 +43,25 @@ export function createAuthSlice(set: Set, get: Get) {
       set({ loading: true, error: null })
       try {
         await prov.signOut()
-        set({ loading: false, todos: [], settings: null, hydrated: false })
+        set({
+          loading: false,
+          todos: [],
+          settings: {
+            sortMode: 'manual',
+            sortOrder: 'desc',
+            autoCloseOnBlur: true,
+            globalShortcut: 'Shift+Space',
+            themeMode: 'system',
+            activeListId: 'default',
+            lists: [{ id: 'default', name: 'Mes tâches', createdAt: 0 }],
+            labels: [{ id: 'general', name: 'Général', color: 'slate' }],
+            enableAutostart: true,
+            enableSoundEffects: true,
+            soundSettings: { enabled: true, onCreate: true, onComplete: true, onDelete: true },
+            language: 'auto',
+          },
+          hydrated: true,
+        })
       } catch (error) {
         set({ loading: false, error: error instanceof Error ? error.message : 'Sign out failed' })
         throw error

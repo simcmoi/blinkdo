@@ -1,10 +1,15 @@
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::commands::helpers::lock_error;
-use crate::storage::{AppData, AppState, DB_FILE_NAME, STORAGE_FILE_NAME};
+use crate::storage::{AppData, AppState, DB_FILE_NAME};
 
 #[tauri::command]
 pub fn set_window_width(app: AppHandle, width: f64) -> Result<(), String> {
+    if !width.is_finite() {
+        return Err("width must be a finite number".to_string());
+    }
+    let width = width.clamp(200.0, 2000.0);
+
     let window = app.get_webview_window("overlay")
         .or_else(|| app.get_webview_window("main"))
         .ok_or_else(|| "no window found".to_string())?;
@@ -50,14 +55,14 @@ pub fn get_app_version() -> String {
 #[tauri::command]
 pub fn get_data_file_path(app: AppHandle) -> Result<String, String> {
     let app_dir = app.path().app_data_dir().map_err(|e| format!("failed to resolve appDataDir: {e}"))?;
-    let path = app_dir.join(STORAGE_FILE_NAME);
+    let path = app_dir.join(DB_FILE_NAME);
     path.to_str().ok_or_else(|| "invalid path".to_string()).map(|s| s.to_string())
 }
 
 #[tauri::command]
 pub fn open_data_file(app: AppHandle) -> Result<(), String> {
     let app_dir = app.path().app_data_dir().map_err(|e| format!("failed to resolve appDataDir: {e}"))?;
-    let path = app_dir.join(STORAGE_FILE_NAME);
+    let path = app_dir.join(DB_FILE_NAME);
 
     #[cfg(target_os = "macos")] {
         std::process::Command::new("open").arg(&path).spawn()
@@ -106,6 +111,19 @@ pub fn open_log_file(app: AppHandle) -> Result<(), String> {
 pub fn reset_all_data(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     log::info!("Resetting all data");
 
+    let app_dir = app.path().app_data_dir().map_err(|e| format!("failed to resolve appDataDir: {e}"))?;
+
+    // Delete files first before clearing state (if crash, old files remain)
+    for file in [DB_FILE_NAME, "todos.json", "todos.json.bak"] {
+        let path = app_dir.join(file);
+        if path.exists() { std::fs::remove_file(&path).map_err(|e| format!("failed to delete {file}: {e}"))?; }
+    }
+    for suffix in ["-wal", "-shm"] {
+        let path = app_dir.join(format!("{DB_FILE_NAME}{suffix}"));
+        if path.exists() { std::fs::remove_file(&path).ok(); }
+    }
+
+    // Then clear in-memory state
     let mut guard = state.data.lock().map_err(|_| lock_error("todo"))?;
     *guard = AppData::default();
     drop(guard);
@@ -115,13 +133,6 @@ pub fn reset_all_data(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
     drop(notified_guard);
 
     crate::shortcuts::replace_registered_shortcut(&app, crate::storage::DEFAULT_GLOBAL_SHORTCUT).ok();
-
-    let app_dir = app.path().app_data_dir().map_err(|e| format!("failed to resolve appDataDir: {e}"))?;
-
-    for file in [STORAGE_FILE_NAME, DB_FILE_NAME, "todos.json.bak"] {
-        let path = app_dir.join(file);
-        if path.exists() { std::fs::remove_file(&path).map_err(|e| format!("failed to delete {file}: {e}"))?; }
-    }
 
     app.emit("data-reset", ()).ok();
     log::info!("All data has been reset");

@@ -62,9 +62,17 @@ export function UpdateDownloadDialog({ version, open, onOpenChange }: UpdateDown
   }, [])
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setProgress(0)
+      setDownloadSpeed(0)
+      setDownloadedBytes(0)
+      setTotalBytes(0)
+      setStatus('downloading')
+      setErrorMessage('')
+      return
+    }
 
-    // Initialize tracking when dialog opens
     speedTrackingRef.current = {
       lastUpdate: Date.now(),
       lastBytes: 0

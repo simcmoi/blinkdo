@@ -106,12 +106,11 @@ pub fn set_todo_priority(id: String, priority: TodoPriority, app: AppHandle, sta
 
 #[tauri::command]
 pub fn set_todo_label(id: String, label_id: Option<String>, app: AppHandle, state: State<'_, AppState>) -> Result<AppData, String> {
+    let mut guard = state.data.lock().map_err(|_| lock_error("todo"))?;
     let normalized_label_id = normalize_optional_id(label_id).and_then(|candidate| {
-        let guard = state.data.lock().map_err(|_| lock_error("todo")).ok()?;
         guard.settings.labels.iter().find(|label| label.id == candidate).map(|label| label.id.clone())
     });
 
-    let mut guard = state.data.lock().map_err(|_| lock_error("todo"))?;
     if let Some(todo) = guard.todos.iter_mut().find(|todo| todo.id == id) {
         todo.label_id = normalized_label_id;
     }

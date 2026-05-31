@@ -1,13 +1,20 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
 
 use crate::storage::{now_millis, AppState, Todo};
 
 const POLL_INTERVAL_SECONDS: u64 = 10;
+const MAX_CONSECUTIVE_FAILURES: u32 = 3;
+
+fn notification_failures() -> &'static Mutex<HashMap<String, u32>> {
+    static FAILURES: OnceLock<Mutex<HashMap<String, u32>>> = OnceLock::new();
+    FAILURES.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 pub fn start_scheduler(app: AppHandle) {
     thread::spawn(move || loop {
@@ -72,6 +79,17 @@ fn check_due_reminders(app: &AppHandle) -> Result<(), String> {
                 "failed to display reminder notification for {}: {error}",
                 todo.id
             );
+
+            let mut failures = notification_failures().lock().unwrap();
+            let count = failures.entry(todo.id.clone()).or_insert(0);
+            *count += 1;
+
+            if *count >= MAX_CONSECUTIVE_FAILURES {
+                failures.remove(&todo.id);
+                drop(failures);
+                app.emit("reminder-notification-failed", &todo.title).ok();
+            }
+
             continue;
         }
 

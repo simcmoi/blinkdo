@@ -16,44 +16,60 @@ class SoundEffects {
   }
 
   constructor() {
-    // Initialiser AudioContext de manière lazy
-    if (typeof window !== 'undefined') {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-      } catch (error) {
-        console.warn('AudioContext not supported:', error)
+    // AudioContext créé paresseusement au premier son
+  }
+
+  private ensureContext(): AudioContext | null {
+    if (this.audioContext) {
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume()
       }
+      return this.audioContext
     }
+
+    if (typeof window === 'undefined') return null
+
+    try {
+      const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      if (!Ctor) return null
+      this.audioContext = new Ctor()
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume()
+      }
+    } catch (error) {
+      console.warn('AudioContext not supported:', error)
+      return null
+    }
+
+    return this.audioContext
   }
 
   setSettings(settings: SoundSettings): void {
     this.settings = settings
   }
 
-  /** @deprecated Use setSettings instead */
   setEnabled(enabled: boolean): void {
     this.settings.enabled = enabled
   }
 
   private playTone(frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.3): void {
-    if (!this.settings.enabled || !this.audioContext) return
+    const ctx = this.ensureContext()
+    if (!this.settings.enabled || !ctx) return
 
     try {
-      const oscillator = this.audioContext.createOscillator()
-      const gainNode = this.audioContext.createGain()
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
 
       oscillator.connect(gainNode)
-      gainNode.connect(this.audioContext.destination)
+      gainNode.connect(ctx.destination)
 
       oscillator.frequency.value = frequency
       oscillator.type = type
 
-      // Envelope ADSR simplifié pour un son plus doux
-      const now = this.audioContext.currentTime
+      const now = ctx.currentTime
       gainNode.gain.setValueAtTime(0, now)
-      gainNode.gain.linearRampToValueAtTime(volume, now + 0.01) // Attack
-      gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration) // Decay/Release
+      gainNode.gain.linearRampToValueAtTime(volume, now + 0.01)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration)
 
       oscillator.start(now)
       oscillator.stop(now + duration)
@@ -62,52 +78,30 @@ class SoundEffects {
     }
   }
 
-  /**
-   * Son pour l'ajout d'une tâche - petit clic doux montant
-   */
   playAdd(): void {
-    if (!this.settings.enabled || !this.settings.onCreate || !this.audioContext) return
-    
-    // Deux tons rapides ascendants pour un effet "pop"
-    this.playTone(440, 0.05, 'sine', 0.15) // La
-    setTimeout(() => this.playTone(554, 0.08, 'sine', 0.2), 30) // Do#
+    if (!this.settings.enabled || !this.settings.onCreate) return
+    this.playTone(440, 0.05, 'sine', 0.15)
+    setTimeout(() => this.playTone(554, 0.08, 'sine', 0.2), 30)
   }
 
-  /**
-   * Son pour la suppression - petit clic descendant
-   */
   playDelete(): void {
-    if (!this.settings.enabled || !this.settings.onDelete || !this.audioContext) return
-    
-    // Ton descendant pour un effet "whoosh"
-    this.playTone(660, 0.06, 'sine', 0.2) // Mi
-    setTimeout(() => this.playTone(440, 0.08, 'sine', 0.15), 20) // La
+    if (!this.settings.enabled || !this.settings.onDelete) return
+    this.playTone(660, 0.06, 'sine', 0.2)
+    setTimeout(() => this.playTone(440, 0.08, 'sine', 0.15), 20)
   }
 
-  /**
-   * Son pour compléter une tâche - son satisfaisant
-   */
   playComplete(): void {
-    if (!this.settings.enabled || !this.settings.onComplete || !this.audioContext) return
-    
-    // Trois tons montants pour un effet "success"
-    this.playTone(523, 0.06, 'sine', 0.15) // Do
-    setTimeout(() => this.playTone(659, 0.06, 'sine', 0.15), 40) // Mi
-    setTimeout(() => this.playTone(784, 0.12, 'sine', 0.2), 80) // Sol
+    if (!this.settings.enabled || !this.settings.onComplete) return
+    this.playTone(523, 0.06, 'sine', 0.15)
+    setTimeout(() => this.playTone(659, 0.06, 'sine', 0.15), 40)
+    setTimeout(() => this.playTone(784, 0.12, 'sine', 0.2), 80)
   }
 
-  /**
-   * Son pour toggle (marquer comme incomplet) - petit bip simple
-   */
   playToggle(): void {
-    if (!this.settings.enabled || !this.settings.onComplete || !this.audioContext) return
-    
-    this.playTone(440, 0.08, 'sine', 0.15) // La simple
+    if (!this.settings.enabled || !this.settings.onComplete) return
+    this.playTone(440, 0.08, 'sine', 0.15)
   }
 
-  /**
-   * Son générique pour une action
-   */
   play(type: SoundType): void {
     switch (type) {
       case 'add':

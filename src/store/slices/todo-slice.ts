@@ -11,6 +11,7 @@ import {
   setTodoStarred as setTodoStarredCommand,
   updateTodo as updateTodoCommand,
 } from '@/lib/tauri'
+import { enqueue } from '@/store/operation-queue'
 import type { Todo, TodoPriority } from '@/types/todo'
 
 type Set = (state: Record<string, unknown>) => void
@@ -21,7 +22,12 @@ export function createTodoSlice(set: Set, get: Get) {
   const provider = () => (get() as { storageProvider: { save: (d: unknown) => Promise<void>; getSyncStatus: () => string } | null }).storageProvider
 
   const handle = async <T>(local: () => Promise<T>, cloud: () => Promise<T>) => {
-    return mode() === 'local' ? local() : cloud()
+    const fn = mode() === 'local' ? local : cloud
+    try {
+      await enqueue(fn)
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Operation failed' })
+    }
   }
 
   return {

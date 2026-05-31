@@ -67,7 +67,7 @@ export function LabelsSettings({
 
   const addLabel = async () => {
     const newLabel: TodoLabel = {
-      id: `label-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: t('settings.newLabel'),
       color: 'slate',
     }

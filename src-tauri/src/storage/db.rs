@@ -49,7 +49,10 @@ fn load_settings(conn: &Connection) -> SqlResult<Settings> {
             [],
             |row| row.get(0),
         )
-        .unwrap_or_else(|_| "null".to_string());
+        .unwrap_or_else(|e| {
+            log::warn!("failed to load settings from database: {e}");
+            "null".to_string()
+        });
 
     if json == "null" {
         return Ok(Settings::default());
@@ -78,7 +81,10 @@ fn load_todos(conn: &Connection) -> SqlResult<Vec<Todo>> {
                 list_id: row.get(4)?,
                 starred: row.get::<_, i64>(5)? != 0,
                 priority: serde_json::from_str(&format!("\"{}\"", priority_str))
-                    .unwrap_or(TodoPriority::None),
+                    .unwrap_or_else(|e| {
+                        log::warn!("failed to parse priority '{}': {e}", priority_str);
+                        TodoPriority::None
+                    }),
                 label_id: row.get(7)?,
                 sort_index: row.get(8)?,
                 created_at: row.get(9)?,

@@ -1,4 +1,5 @@
 import { createList as createListCommand, renameList as renameListCommand, setListIcon as setListIconCommand, setActiveList as setActiveListCommand } from '@/lib/tauri'
+import { enqueue } from '@/store/operation-queue'
 
 type Set = (state: Record<string, unknown>) => void
 type Get = () => Record<string, unknown>
@@ -7,7 +8,14 @@ export function createListSlice(set: Set, get: Get) {
   const mode = () => (get() as { storageMode: string }).storageMode
   const p = () => (get() as { storageProvider: { save: (d: unknown) => Promise<void>; getSyncStatus: () => string } | null }).storageProvider
 
-  const handle = async <T>(local: () => Promise<T>, cloud: () => Promise<T>) => mode() === 'local' ? local() : cloud()
+  const handle = async <T>(local: () => Promise<T>, cloud: () => Promise<T>) => {
+    const fn = mode() === 'local' ? local : cloud
+    try {
+      await enqueue(fn)
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Operation failed' })
+    }
+  }
 
   return {
     createList: async (name: string) => {

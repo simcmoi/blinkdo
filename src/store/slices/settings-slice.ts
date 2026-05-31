@@ -1,4 +1,5 @@
 import { setAutostartEnabled as setAutostartEnabledCommand, setGlobalShortcut as setGlobalShortcutCommand, updateSettings as updateSettingsCommand } from '@/lib/tauri'
+import { enqueue } from '@/store/operation-queue'
 import type { Settings } from '@/types/todo'
 
 type Set = (state: Record<string, unknown> | ((prev: Record<string, unknown>) => Record<string, unknown>)) => void
@@ -8,10 +9,19 @@ export function createSettingsSlice(set: Set, get: Get) {
   const mode = () => (get() as { storageMode: string }).storageMode
   const p = () => (get() as { storageProvider: { save: (d: unknown) => Promise<void>; getSyncStatus: () => string } | null }).storageProvider
 
-  const handle = async <T>(local: () => Promise<T>, cloud: () => Promise<T>) => mode() === 'local' ? local() : cloud()
+  const handle = async <T>(local: () => Promise<T>, cloud: () => Promise<T>) => {
+    const fn = mode() === 'local' ? local : cloud
+    try {
+      await enqueue(fn)
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Operation failed' })
+    }
+  }
 
   return {
     updateSettings: async (partial: Partial<Settings>) => {
+      const previousSettings = (get() as { settings: Settings }).settings
+
       set((state: Record<string, unknown>) => {
         const s = state as { settings: Settings }
         const merged: Settings = {
@@ -26,18 +36,22 @@ export function createSettingsSlice(set: Set, get: Get) {
 
       const mergedSettings = (get() as { settings: Settings }).settings
 
-      await handle(
-        async () => {
-          const data = await updateSettingsCommand(mergedSettings)
-          set({ todos: data.todos, settings: data.settings, error: null })
-        },
-        async () => {
-          const prov = p()
-          if (!prov) throw new Error('Storage provider not initialized')
-          await prov.save({ todos: (get() as { todos: unknown }).todos, settings: mergedSettings })
-          set({ syncStatus: prov.getSyncStatus() })
-        },
-      )
+      try {
+        await handle(
+          async () => {
+            const data = await updateSettingsCommand(mergedSettings)
+            set({ todos: data.todos, settings: data.settings, error: null })
+          },
+          async () => {
+            const prov = p()
+            if (!prov) throw new Error('Storage provider not initialized')
+            await prov.save({ todos: (get() as { todos: unknown }).todos, settings: mergedSettings })
+            set({ syncStatus: prov.getSyncStatus() })
+          },
+        )
+      } catch {
+        set({ settings: previousSettings, error: 'Settings update failed, reverted' })
+      }
     },
 
     setGlobalShortcut: async (shortcut: string) => {

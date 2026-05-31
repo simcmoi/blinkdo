@@ -1,5 +1,5 @@
-import { type FocusEvent, type MutableRefObject } from 'react'
-import { CalendarClock, FileText, X } from 'lucide-react'
+import { type FocusEvent, type MutableRefObject, useState } from 'react'
+import { CalendarClock, Check, CornerDownLeft, FileText, Loader2, Plus, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -73,6 +73,23 @@ export function TodoInlineEditor({
   const isExistingTodo = targetId !== 'new'
   const leftOffset = Math.min(depth, 6) * 16
   const reminderBadgeStyle = draft.reminderAt ? getReminderBadgeStyle(draft.reminderAt, t, i18n) : null
+  const [commitState, setCommitState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const canCommit = draft.title.trim().length > 0 && commitState !== 'saving'
+
+  const commitDraft = async (reopenAfterCreate = true) => {
+    if (!draft.title.trim() || commitState === 'saving') return
+
+    setCommitState('saving')
+    const persisted = await onPersistAndClose(true, reopenAfterCreate)
+
+    if (!persisted) {
+      setCommitState('idle')
+      return
+    }
+
+    setCommitState('saved')
+    window.setTimeout(() => setCommitState('idle'), 850)
+  }
 
   const onBlur = (event: FocusEvent<HTMLDivElement>) => {
     const nextFocused = event.relatedTarget
@@ -98,7 +115,10 @@ export function TodoInlineEditor({
       >
         <div
           ref={editorContainerRef}
-          className="flex items-start gap-2 rounded-md border border-border bg-card px-2.5 py-2 shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15"
+          className={cn(
+            'flex items-start gap-2 rounded-md border border-primary/35 bg-card px-2.5 py-2 shadow-md shadow-primary/5 transition-all focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15',
+            commitState === 'saved' && 'border-emerald-500/50 ring-2 ring-emerald-500/15',
+          )}
           onPointerDownCapture={() => { lastPointerInsideEditorAtRef.current = window.performance.now() }}
           onBlur={onBlur}
         >
@@ -110,47 +130,88 @@ export function TodoInlineEditor({
               aria-label={t('todo.markAsCompleted')}
             />
           ) : (
-            <Checkbox className="mt-2" checked={false} disabled aria-label={t('todo.newTask')} />
+            <div className="mt-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-primary/30 bg-primary/10 text-primary">
+              <Plus className="h-3.5 w-3.5" />
+            </div>
           )}
           <div className="min-w-0 flex-1 space-y-1.5">
-          <Textarea
-            ref={(node) => {
-              titleInputRef.current = node
-              composeInputRef.current = node
-            }}
-            value={draft.title}
-            onChange={(event) => {
-              onSaveErrorChange(null)
-              const newValue = event.target.value
-              if (newValue.length <= 1000) {
-                onTitleChange(newValue)
-                const target = event.target
-                target.style.height = 'auto'
-                target.style.height = `${Math.min(target.scrollHeight, 120)}px`
-              }
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Tab' && !event.shiftKey) {
-                event.preventDefault()
-                onShowDetailsChange(true)
-                setTimeout(() => detailsInputRef.current?.focus(), 0)
-                return
-              }
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault()
-                void onPersistAndClose(true, true)
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault()
-                event.stopPropagation()
-                onClose()
-              }
-            }}
-            placeholder={t('todo.taskTitle')}
-            maxLength={1000}
-            rows={1}
-              className="min-h-9 max-h-[112px] resize-none overflow-y-auto rounded-md border-0 bg-muted/40 px-2.5 py-1.5 text-[15px] leading-6 shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+          <div className="flex min-w-0 items-start gap-1.5">
+            <Textarea
+              ref={(node) => {
+                titleInputRef.current = node
+                composeInputRef.current = node
+              }}
+              value={draft.title}
+              onChange={(event) => {
+                onSaveErrorChange(null)
+                const newValue = event.target.value
+                if (newValue.length <= 1000) {
+                  onTitleChange(newValue)
+                  const target = event.target
+                  target.style.height = 'auto'
+                  target.style.height = `${Math.min(target.scrollHeight, 120)}px`
+                }
+              }}
+              onKeyDown={(event) => {
+                if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd') {
+                  event.preventDefault()
+                  onShowDetailsChange(true)
+                  setTimeout(() => detailsInputRef.current?.focus(), 0)
+                  return
+                }
+                if ((event.metaKey || event.ctrlKey) && event.key === '1') {
+                  event.preventDefault()
+                  onSaveErrorChange(null)
+                  onApplyReminder(getTodayAtDefaultHour())
+                  return
+                }
+                if ((event.metaKey || event.ctrlKey) && event.key === '2') {
+                  event.preventDefault()
+                  onSaveErrorChange(null)
+                  onApplyReminder(getTomorrowAtDefaultHour())
+                  return
+                }
+                if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                  event.preventDefault()
+                  void commitDraft(false)
+                  return
+                }
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault()
+                  void commitDraft(true)
+                  return
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onClose()
+                }
+              }}
+              placeholder={t('todo.taskTitle')}
+              maxLength={1000}
+              rows={1}
+              className="min-h-9 max-h-[112px] flex-1 resize-none overflow-y-auto rounded-md border-0 bg-muted/45 px-2.5 py-1.5 text-[15px] font-medium leading-6 text-foreground shadow-none placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-primary/30"
             />
+            <Button
+              type="button"
+              size="sm"
+              disabled={!canCommit}
+              className="h-9 shrink-0 gap-1.5 px-2.5"
+              onClick={() => void commitDraft(true)}
+              aria-label={targetId === 'new' ? t('todo.addTask') : t('common.save')}
+            >
+              {commitState === 'saving' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : commitState === 'saved' ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <CornerDownLeft className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden min-[420px]:inline">
+                {commitState === 'saved' ? 'OK' : targetId === 'new' ? t('common.add') : t('common.save')}
+              </span>
+            </Button>
+          </div>
 
             <div className="flex items-center gap-1.5 px-2.5">
             {!showDetails && draft.details.trim().length === 0 && (
@@ -167,6 +228,22 @@ export function TodoInlineEditor({
                 onBlur={(event) => {
                   if (!event.target.value.trim()) onShowDetailsChange(false)
                 }}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                    event.preventDefault()
+                    void commitDraft(false)
+                    return
+                  }
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    void commitDraft(true)
+                    return
+                  }
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    titleInputRef.current?.focus()
+                  }
+                }}
                 placeholder={t('todo.detail')}
                 className="h-6 border-none bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
               />
@@ -177,7 +254,8 @@ export function TodoInlineEditor({
                   onShowDetailsChange(true)
                   setTimeout(() => detailsInputRef.current?.focus(), 0)
                 }}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
               >
                 {t('todo.detail')}
               </button>
@@ -252,7 +330,7 @@ export function TodoInlineEditor({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  tabIndex={0}
+                  tabIndex={-1}
                   className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
                   onClick={() => {
                     onSaveErrorChange(null)
@@ -273,7 +351,7 @@ export function TodoInlineEditor({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  tabIndex={0}
+                  tabIndex={-1}
                   className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
                   onClick={() => {
                     onSaveErrorChange(null)
@@ -303,7 +381,7 @@ export function TodoInlineEditor({
                       type="button"
                       size="sm"
                       variant="ghost"
-                      tabIndex={0}
+                      tabIndex={-1}
                       className="h-6 w-6 p-0 focus-visible:ring-1 focus-visible:ring-ring"
                       onClick={() => {
                         onSaveErrorChange(null)

@@ -1,6 +1,6 @@
 import { type RefObject, useEffect, useRef } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { hideOverlay } from '@/lib/tauri'
+import { hideOverlay, isTauriRuntime } from '@/lib/tauri'
 
 export function useWindowBehavior(
   autoCloseOnBlur: boolean,
@@ -15,6 +15,15 @@ export function useWindowBehavior(
 
   // Auto-focus input when window becomes visible (Tauri event — single source of truth)
   useEffect(() => {
+    if (!isTauriRuntime()) {
+      window.dispatchEvent(new CustomEvent('tauri-window-focused'))
+      setTimeout(() => {
+        inputRef.current?.focus()
+        inputRef.current?.select()
+      }, 50)
+      return
+    }
+
     let unlistenFocus: (() => void) | undefined
     let lastFocusTime = 0
 
@@ -57,12 +66,14 @@ export function useWindowBehavior(
       if (event.key !== 'Escape') return
       if (!isEditorOpen) {
         event.preventDefault()
-        void hideOverlay()
+        if (isTauriRuntime()) {
+          void hideOverlay()
+        }
       }
     }
 
     const onBlur = () => {
-      if (autoCloseRef.current) {
+      if (autoCloseRef.current && isTauriRuntime()) {
         void hideOverlay()
       }
     }

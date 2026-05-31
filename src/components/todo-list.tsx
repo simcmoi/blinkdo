@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { AlertTriangle, CalendarClock, Check, ChevronDown, ChevronRight, Ellipsis, FileText, Plus, Star, Tags } from 'lucide-react'
+import { AlertTriangle, CalendarClock, Check, CheckCircle2, ChevronDown, ChevronRight, Ellipsis, FileText, Plus, Sparkles, Star, Tags } from 'lucide-react'
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
@@ -99,6 +99,7 @@ type TodoDraft = {
 
 const INITIAL_COMPLETED_VISIBLE_COUNT = 5
 const COMPLETED_VISIBLE_STEP = 10
+const COMPLETION_FEEDBACK_MS = 420
 
 function priorityClasses(priority: TodoPriority): string {
   switch (priority) {
@@ -221,6 +222,7 @@ export function TodoList({
   const [overId, setOverId] = useState<string | null>(null)
   const [dropPosition, setDropPosition] = useState<'before' | 'after'>('after')
   const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null)
+  const [completingIds, setCompletingIds] = useState<Set<string>>(() => new Set())
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -261,6 +263,23 @@ export function TodoList({
   const saveInFlightRef = useRef(false)
   const editingIdRef = useRef<string | 'new' | null>(null)
   const lastPointerInsideEditorAtRef = useRef(0)
+
+  const markTodoCompleteWithFeedback = useCallback(async (id: string) => {
+    if (completingIds.has(id)) return
+
+    setCompletingIds((current) => new Set(current).add(id))
+    await new Promise((resolve) => window.setTimeout(resolve, COMPLETION_FEEDBACK_MS))
+
+    try {
+      await onSetCompleted(id, true)
+    } finally {
+      setCompletingIds((current) => {
+        const next = new Set(current)
+        next.delete(id)
+        return next
+      })
+    }
+  }, [completingIds, onSetCompleted])
 
   const compactDateFormatter = useMemo(
     () => {
@@ -519,7 +538,7 @@ export function TodoList({
 
       if (event.key === ' ') {
         event.preventDefault()
-        void onSetCompleted(selectedTodo.id, true)
+        void markTodoCompleteWithFeedback(selectedTodo.id)
         return
       }
 
@@ -543,6 +562,7 @@ export function TodoList({
     editingId,
     navigableTodoIds,
     onDelete,
+    markTodoCompleteWithFeedback,
     onSetCompleted,
     onSetStarred,
     openCreateEditor,
@@ -717,7 +737,7 @@ export function TodoList({
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-10 w-full justify-start gap-2 border-dashed bg-muted/40 px-3 text-sm font-medium text-foreground hover:border-solid hover:bg-muted/70"
+                    className="h-9 w-full justify-start gap-2 border-dashed bg-card px-3 text-sm font-medium text-muted-foreground hover:border-solid hover:bg-muted/70 hover:text-foreground"
                     onClick={() => {
                       void openCreateEditor()
                     }}
@@ -731,12 +751,18 @@ export function TodoList({
               {editingId === 'new' && newParentId === null ? renderEditorRow('new', 0) : null}
 
               {activeTodos.length === 0 ? (
-                <li className="px-4 py-4 text-center text-sm text-muted-foreground">{emptyLabel}</li>
+                <li className="px-4 py-8 text-center">
+                  <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-muted-foreground">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-foreground">{emptyLabel}</p>
+                </li>
               ) : (
                 <AnimatePresence initial={false}>
                   {activeItems.flatMap(({ todo, depth }) => {
                     const priority = todo.priority ?? 'none'
                     const label = todo.labelId ? labelById.get(todo.labelId) : undefined
+                    const isCompleting = completingIds.has(todo.id)
                     const rows: ReactNode[] = []
 
                     if (editingId === todo.id) {
@@ -756,19 +782,38 @@ export function TodoList({
                             layout
                             layoutId={`todo-card-${todo.id}`}
                             className={cn(
-                              'flex items-start gap-1.5 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/60',
-                              effectiveSelectedTodoId === todo.id && editingId === null ? 'bg-muted ring-1 ring-primary/25' : undefined,
-                              priority === 'urgent' ? 'ring-1 ring-destructive/35' : undefined,
+                              'group relative flex items-start gap-2 overflow-hidden rounded-md border border-transparent px-2 py-1.5 transition-colors hover:border-border/80 hover:bg-card',
+                              'before:absolute before:bottom-1.5 before:left-0 before:top-1.5 before:w-0.5 before:rounded-full before:bg-transparent',
+                              effectiveSelectedTodoId === todo.id && editingId === null ? 'border-border bg-card shadow-sm before:bg-primary' : undefined,
+                              priority === 'urgent' ? 'border-destructive/30 bg-destructive/5 before:bg-destructive' : undefined,
+                              isCompleting ? 'border-emerald-500/35 bg-emerald-500/10 shadow-sm before:bg-emerald-500' : undefined,
                               canReorder && editingId === null ? 'cursor-grab active:cursor-grabbing' : undefined,
                             )}
+                            animate={isCompleting ? { scale: 0.992 } : { scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 520, damping: 32, mass: 0.5 }}
                             onMouseEnter={() => setSelectedTodoId(todo.id)}
                           >
+                            <AnimatePresence>
+                              {isCompleting ? (
+                                <motion.div
+                                  aria-hidden
+                                  className="pointer-events-none absolute inset-0 bg-emerald-500/5"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.12 }}
+                                />
+                              ) : null}
+                            </AnimatePresence>
                             <Checkbox
-                              className="mt-0.5"
-                              checked={typeof todo.completedAt === 'number'}
+                              className={cn(
+                                'relative z-10 mt-0.5 h-5 w-5 rounded-md',
+                                isCompleting && 'border-emerald-600 bg-emerald-600 text-white',
+                              )}
+                              checked={isCompleting || typeof todo.completedAt === 'number'}
                               onCheckedChange={async (checked) => {
                                 if (checked === true) {
-                                  await onSetCompleted(todo.id, true)
+                                  await markTodoCompleteWithFeedback(todo.id)
                                 }
                               }}
                               aria-label={t('todo.markCompleted', { title: todo.title })}
@@ -776,13 +821,16 @@ export function TodoList({
 
                           <button
                             type="button"
-                            className="min-w-0 flex-1 overflow-hidden text-left focus-visible:outline-none"
+                            className="relative z-10 min-w-0 flex-1 overflow-hidden text-left focus-visible:outline-none"
                             onClick={() => {
                               setSelectedTodoId(todo.id)
                               void openTodoEditor(todo)
                             }}
                           >
-                            <p className="max-w-full whitespace-normal break-words text-sm leading-5 text-foreground line-clamp-3">{todo.title}</p>
+                            <p className={cn(
+                              'max-w-full whitespace-normal break-words text-sm font-medium leading-5 text-foreground line-clamp-3 transition-colors',
+                              isCompleting && 'text-emerald-800 line-through decoration-emerald-700/70 decoration-2 dark:text-emerald-200',
+                            )}>{todo.title}</p>
                             {(todo.details || todo.reminderAt || priority !== 'none' || label) && (
                               <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                                 {todo.reminderAt ? (
@@ -856,7 +904,7 @@ export function TodoList({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            className="h-7 w-7 opacity-70 text-muted-foreground transition-opacity hover:text-foreground group-hover:opacity-100"
                             onClick={async () => {
                               await onSetStarred(todo.id, !todo.starred)
                             }}
@@ -869,6 +917,20 @@ export function TodoList({
                               )}
                             />
                           </Button>
+                          <AnimatePresence>
+                            {isCompleting ? (
+                              <motion.div
+                                className="relative z-10 ml-1 flex h-7 shrink-0 items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/15 px-2 text-xs font-medium text-emerald-700 dark:text-emerald-200"
+                                initial={{ opacity: 0, x: 8, scale: 0.96 }}
+                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                exit={{ opacity: 0, x: 8, scale: 0.96 }}
+                                transition={{ type: 'spring', stiffness: 520, damping: 32 }}
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                {t('common.done')}
+                              </motion.div>
+                            ) : null}
+                          </AnimatePresence>
                         </motion.div>
                         </SortableTodoItem>,
                       )
@@ -883,10 +945,10 @@ export function TodoList({
                 </AnimatePresence>
               )}
 
-              <li className="mt-2 px-2 pt-1">
+              <li className="mt-3 px-2 pt-1">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-1 text-left text-sm text-muted-foreground hover:text-foreground"
+                  className="flex w-full items-center gap-1 rounded-md px-1 py-1 text-left text-xs font-medium uppercase tracking-normal text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   onClick={() => {
                     setCompletedExpanded((current) => !current)
                   }}
@@ -919,11 +981,11 @@ export function TodoList({
                             <motion.div
                               layout
                               layoutId={`todo-card-${todo.id}`}
-                              className="flex items-start gap-1.5 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/50"
+                              className="group flex items-start gap-2 rounded-md border border-transparent px-2 py-1.5 transition-colors hover:border-border/80 hover:bg-card"
                             >
                               <Checkbox
                                 checked
-                                className="mt-0.5"
+                                className="mt-0.5 border-muted-foreground/30 bg-background"
                                 onCheckedChange={async (checked) => {
                                   if (checked === false) {
                                     await onSetCompleted(todo.id, false)
@@ -952,7 +1014,7 @@ export function TodoList({
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    className="h-7 w-7 opacity-70 text-muted-foreground transition-opacity hover:text-foreground group-hover:opacity-100"
                                     aria-label={`Actions pour ${todo.title}`}
                                   >
                                     <Ellipsis className="h-3.5 w-3.5" />
@@ -1001,7 +1063,7 @@ export function TodoList({
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                className="h-7 w-7 opacity-70 text-muted-foreground transition-opacity hover:text-foreground group-hover:opacity-100"
                                 onClick={async () => {
                                   await onSetStarred(todo.id, !todo.starred)
                                 }}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Home, Plus, Settings } from 'lucide-react'
+import { CheckCircle2, ChevronDown, Circle, Home, Plus, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { listen } from '@tauri-apps/api/event'
 import { useTranslation } from 'react-i18next'
@@ -15,6 +15,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +30,7 @@ import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useTodoStore } from '@/store/use-todo-store'
 import { useUpdateStore } from '@/store/use-update-store'
 import { useFilteredTodos } from '@/hooks/useFilteredTodos'
-import { setWindowWidth, isOverlayWindow } from '@/lib/tauri'
+import { setWindowWidth, isOverlayWindow, isTauriRuntime } from '@/lib/tauri'
 import { cn } from '@/lib/utils'
 
 export default function App() {
@@ -158,6 +159,8 @@ export default function App() {
 
   // Listen for data-reset event from backend
   useEffect(() => {
+    if (!isTauriRuntime()) return
+
     const unlisten = listen('data-reset', () => {
       console.log('🔄 Data reset event received!')
       
@@ -319,7 +322,7 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.12 }}
-          className="mx-auto flex h-full w-full max-w-[520px] flex-col overflow-hidden border border-border/70 bg-card shadow-xl"
+          className="mx-auto flex h-full w-full max-w-[520px] flex-col overflow-hidden rounded-lg border border-border/80 bg-card shadow-2xl"
         >
         <UpdateBanner />
         {/* Header: current list and global actions */}
@@ -365,7 +368,7 @@ export default function App() {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-7 max-w-[220px] justify-start gap-1.5 px-1 text-sm font-semibold"
+                    className="h-7 max-w-[220px] justify-start gap-1.5 px-1 text-sm font-semibold text-foreground"
                   >
                     {activeList && (() => {
                       const Icon = getIconComponent(activeList.icon)
@@ -463,6 +466,16 @@ export default function App() {
               }}
             />
           </div>
+          <div className="hidden items-center gap-1.5 sm:flex">
+            <Badge variant="outline" className="h-6 rounded-md border-border/80 bg-background px-1.5 text-[11px] font-medium text-muted-foreground">
+              <Circle className="h-2.5 w-2.5 fill-primary/20 text-primary" />
+              {activeTodos.length}
+            </Badge>
+            <Badge variant="outline" className="h-6 rounded-md border-border/80 bg-background px-1.5 text-[11px] font-medium text-muted-foreground">
+              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+              {completedTodos.length}
+            </Badge>
+          </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -508,7 +521,7 @@ export default function App() {
         </Tooltip>
         </div>
 
-        <div className="min-h-0 flex-1 bg-background px-2 py-2">
+        <div className="min-h-0 flex-1 bg-background/95 px-2 py-2">
           {loading && !hydrated ? (
             <div className="flex h-full items-center justify-center rounded-md border border-border text-sm text-muted-foreground">
               Chargement...

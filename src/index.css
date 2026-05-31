@@ -3,24 +3,24 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.9916 0.0017 67.8029);
+  --background: oklch(0.9550 0.0045 84.5600);
   --foreground: oklch(0.2931 0 0);
-  --card: oklch(0.9826 0.0017 67.8027);
+  --card: oklch(0.9970 0.0010 84.5600);
   --card-foreground: oklch(0.2931 0 0);
   --popover: oklch(0.9826 0.0017 67.8027);
   --popover-foreground: oklch(0.2931 0 0);
   --primary: oklch(0.3327 0.0772 257.1001);
   --primary-foreground: oklch(1.0000 0 0);
-  --secondary: oklch(0.9644 0.0029 84.5590);
+  --secondary: oklch(0.9510 0.0040 84.5600);
   --secondary-foreground: oklch(0.3327 0.0772 257.1001);
-  --muted: oklch(0.9649 0.0045 78.2980);
-  --muted-foreground: oklch(0.5517 0.0138 285.9385);
-  --accent: oklch(0.9476 0.0052 67.7620);
+  --muted: oklch(0.9250 0.0060 84.5600);
+  --muted-foreground: oklch(0.4550 0.0170 285.9385);
+  --accent: oklch(0.9050 0.0140 257.1001);
   --accent-foreground: oklch(0.3327 0.0772 257.1001);
   --destructive: oklch(0.4437 0.1613 26.8994);
   --destructive-foreground: oklch(0.9705 0.0129 17.3797);
-  --border: oklch(0.9256 0.0046 78.2972);
-  --input: oklch(0.9256 0.0046 78.2972);
+  --border: oklch(0.8350 0.0080 84.5600);
+  --input: oklch(0.8350 0.0080 84.5600);
   --ring: oklch(0.3327 0.0772 257.1001);
   --chart-1: oklch(0.3327 0.0772 257.1001);
   --chart-2: oklch(0.4474 0.0343 261.3244);
@@ -38,7 +38,7 @@
   --font-sans: Inter, system-ui, sans-serif;
   --font-serif: Cinzel, serif;
   --font-mono: JetBrains Mono, monospace;
-  --radius: 0rem;
+  --radius: 0.5rem;
   --shadow-x: 0px;
   --shadow-y: 2px;
   --shadow-blur: 4px;

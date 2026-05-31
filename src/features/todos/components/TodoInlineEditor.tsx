@@ -93,30 +93,26 @@ export function TodoInlineEditor({
   return (
     <li
       key={targetId === 'new' ? 'new-editor' : `editor-${targetId}`}
-      className="py-1"
+      className="py-1.5"
       style={leftOffset > 0 ? { paddingLeft: `${leftOffset + 8}px` } : undefined}
-    >
-      <div
-        ref={editorContainerRef}
-        className="flex items-start gap-1.5 rounded-md bg-background px-2 py-2"
-        onPointerDownCapture={() => { lastPointerInsideEditorAtRef.current = window.performance.now() }}
-        onBlur={onBlur}
       >
-        {isExistingTodo ? (
-          <Checkbox
-            className="mt-2"
-            checked={false}
-            onCheckedChange={async () => {
-              await onSetCompleted(targetId, true)
-              onClose()
-            }}
-            aria-label={t('todo.markAsCompleted')}
-          />
-        ) : (
-          <Checkbox className="mt-2" checked={false} disabled aria-label={t('todo.newTask')} />
-        )}
-
-        <div className="min-w-0 flex-1 space-y-1.5">
+        <div
+          ref={editorContainerRef}
+          className="flex items-start gap-2 rounded-xl bg-accent/30 px-3 py-3 ring-1 ring-border focus-within:ring-2 focus-within:ring-primary/20 transition-all"
+          onPointerDownCapture={() => { lastPointerInsideEditorAtRef.current = window.performance.now() }}
+          onBlur={onBlur}
+        >
+          {isExistingTodo ? (
+            <Checkbox
+              className="mt-2.5"
+              checked={false}
+              onCheckedChange={async () => { await onSetCompleted(targetId, true); onClose() }}
+              aria-label={t('todo.markAsCompleted')}
+            />
+          ) : (
+            <Checkbox className="mt-2.5" checked={false} disabled aria-label={t('todo.newTask')} />
+          )}
+          <div className="min-w-0 flex-1 space-y-2">
           <Textarea
             ref={(node) => {
               titleInputRef.current = node
@@ -153,10 +149,10 @@ export function TodoInlineEditor({
             placeholder={t('todo.taskTitle')}
             maxLength={1000}
             rows={1}
-            className="min-h-[32px] max-h-[120px] resize-none overflow-y-auto border-none bg-transparent px-0 py-1 text-sm shadow-none focus-visible:ring-0"
-          />
+              className="min-h-[44px] max-h-[120px] resize-none overflow-y-auto border-0 bg-muted/30 px-3 py-2 text-base shadow-none focus-visible:ring-1 focus-visible:ring-primary/30 rounded-lg"
+            />
 
-          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 px-3">
             {!showDetails && draft.details.trim().length === 0 && (
               <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             )}

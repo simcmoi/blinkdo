@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Home, Plus, Settings, Star } from 'lucide-react'
+import { ChevronDown, Home, Plus, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { listen } from '@tauri-apps/api/event'
 import { useTranslation } from 'react-i18next'
@@ -9,7 +9,6 @@ import { TodoList } from '@/components/todo-list'
 import { UpdateBanner } from '@/components/update-banner'
 import { Onboarding } from '@/components/onboarding/Onboarding'
 import { AppFooter } from '@/features/todos/components/AppFooter'
-import { FilterBar } from '@/features/todos/components/FilterBar'
 import { ListSettingsMenu } from '@/features/todos/components/ListSettingsMenu'
 import { IconPicker, getIconComponent } from '@/components/icon-picker'
 import { Toaster } from '@/components/ui/toaster'
@@ -320,11 +319,11 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.12 }}
-          className="mx-auto flex h-full w-full flex-col overflow-hidden rounded-2xl border-2 border-gray-400/80 bg-card"
+          className="mx-auto flex h-full w-full max-w-2xl flex-col overflow-hidden bg-card"
         >
         <UpdateBanner />
         {/* Header: Logo + Liste + Paramètres - Background distinct */}
-        <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-2.5">
+        <div className="flex items-center justify-between gap-2 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2">
             <img src="/app-icon.png" alt="BlinkDo" className="h-4 w-4 rounded-sm" />
             {activeList && renamingListId === activeList.id ? (
@@ -436,29 +435,15 @@ export default function App() {
                 <p>{t('list.addList')}</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setFavoritesOnly(!favoritesOnly)
-                  }}
-                  aria-label={favoritesOnly ? t('filter.showAllTasks') : t('filter.showFavoritesOnly')}
-                >
-                  <Star className={cn('h-3.5 w-3.5', favoritesOnly ? 'fill-foreground text-foreground' : undefined)} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{favoritesOnly ? t('filter.showAllTasks') : t('filter.showFavoritesOnly')}</p>
-              </TooltipContent>
-            </Tooltip>
             <ListSettingsMenu
               activeList={activeList}
               sortMode={settings.sortMode}
               sortModeOptions={SORT_MODE_OPTIONS}
+              favoritesOnly={favoritesOnly}
+              priorityFilter={priorityFilter}
+              effectiveLabelFilterId={effectiveLabelFilterId}
+              labels={settings.labels}
+              priorityFilters={PRIORITY_FILTERS}
               onSetSortMode={(mode) => void updateSettings({ sortMode: mode })}
               onRenameList={() => {
                 if (!activeList) return
@@ -468,6 +453,14 @@ export default function App() {
               onPrintList={printCurrentList}
               onOpenStatistics={() => setStatisticsPageOpen(true)}
               onClearCompleted={() => { if (activeList) void clearCompletedInList(activeList.id) }}
+              onSetFavoritesOnly={setFavoritesOnly}
+              onSetPriorityFilter={setPriorityFilter}
+              onSetLabelFilterId={setLabelFilterId}
+              onResetFilters={() => {
+                setFavoritesOnly(false)
+                setPriorityFilter('all')
+                setLabelFilterId('all')
+              }}
             />
           </div>
           <Tooltip>
@@ -515,25 +508,8 @@ export default function App() {
         </Tooltip>
         </div>
 
-        {!settingsPageOpen && !statisticsPageOpen ? (
-          <FilterBar
-            favoritesOnly={favoritesOnly}
-            priorityFilter={priorityFilter}
-            effectiveLabelFilterId={effectiveLabelFilterId}
-            labels={settings.labels}
-            priorityFilters={PRIORITY_FILTERS}
-            onSetPriorityFilter={setPriorityFilter}
-            onSetLabelFilterId={setLabelFilterId}
-            onResetFilters={() => {
-              setFavoritesOnly(false)
-              setPriorityFilter('all')
-              setLabelFilterId('all')
-            }}
-          />
-        ) : null}
-
         {/* Zone principale - Liste des tâches avec background blanc/card */}
-        <div className="min-h-0 flex-1 bg-background px-4 py-3">
+        <div className="min-h-0 flex-1 bg-background px-3 py-2">
           {loading && !hydrated ? (
             <div className="flex h-full items-center justify-center rounded-md border border-border text-sm text-muted-foreground">
               Chargement...

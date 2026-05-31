@@ -65,8 +65,8 @@ pub fn run() {
                 }
             }
 
-            // Don't hide main window on startup - let it show normally
-            // window::hide_main_window(&app_handle)?;
+            // Démarrer en mode overlay : cacher la fenêtre principale
+            window::hide_main_window(&app_handle)?;
 
             // Setup window close handlers
             window::setup_window_close_handlers(&app_handle)?;

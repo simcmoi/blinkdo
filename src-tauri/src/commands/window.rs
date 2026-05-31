@@ -28,12 +28,12 @@ pub fn set_window_width(app: AppHandle, width: f64) -> Result<(), String> {
             .ok_or_else(|| "no monitor found".to_string())?;
         let monitor_size = monitor.size().to_logical::<f64>(scale_factor);
         let monitor_position = monitor.position().to_logical::<f64>(scale_factor);
-        let new_x = monitor_position.x + (monitor_size.width - width) / 2.0;
-        let new_y = monitor_position.y + (monitor_size.height - current_size.height) / 2.0;
+        let new_x = monitor_position.x + monitor_size.width - width;
+        let new_y = monitor_position.y;
 
         window.set_position(tauri::LogicalPosition { x: new_x, y: new_y })
             .map_err(|e| format!("failed to set position: {e}"))?;
-        window.set_size(tauri::LogicalSize { width, height: current_size.height })
+        window.set_size(tauri::LogicalSize { width, height: monitor_size.height })
             .map_err(|e| format!("failed to set size: {e}"))?;
     } else {
         window.set_size(tauri::LogicalSize { width, height: current_size.height })

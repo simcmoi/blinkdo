@@ -144,7 +144,7 @@ export default function App() {
       if (!hydrated) return
       
       try {
-        const defaultWidth = isOverlayWindow() ? 500 : 800
+        const defaultWidth = isOverlayWindow() ? 700 : 800
         const settingsWidth = isOverlayWindow() ? 900 : 1200
         await setWindowWidth(settingsPageOpen ? settingsWidth : defaultWidth)
       } catch (error) {

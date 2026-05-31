@@ -1,5 +1,4 @@
 import {
-  type FocusEvent,
   type MutableRefObject,
   type ReactNode,
   useEffect,
@@ -7,7 +6,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { AlertTriangle, CalendarClock, Check, ChevronDown, ChevronRight, Ellipsis, FileText, Plus, Star, Tags, X } from 'lucide-react'
+import { AlertTriangle, CalendarClock, Check, ChevronDown, ChevronRight, Ellipsis, FileText, Plus, Star, Tags } from 'lucide-react'
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
@@ -36,19 +35,22 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { DateTimePicker } from '@/components/ui/date-time-picker'
 import { cn } from '@/lib/utils'
+import {
+  priorityLabel,
+  labelClasses,
+  reminderBadgeClasses,
+  getReminderBadgeStyle,
+  buildTodoWithDepth,
+} from '@/lib/todo-ui'
 import type { Todo, TodoLabel, TodoListMeta, TodoPriority } from '@/types/todo'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
+import { DragOverlayContent } from '@/features/todos/components/DragOverlayContent'
+import { TodoContextMenu } from '@/features/todos/components/TodoContextMenu'
+import { TodoInlineEditor } from '@/features/todos/components/TodoInlineEditor'
 
 type TodoListProps = {
   composeInputRef: MutableRefObject<HTMLInputElement | HTMLTextAreaElement | null>
@@ -94,29 +96,8 @@ type TodoDraft = {
   reminderAt?: number
 }
 
-type TodoWithDepth = {
-  todo: Todo
-  depth: number
-}
-
 const INITIAL_COMPLETED_VISIBLE_COUNT = 5
 const COMPLETED_VISIBLE_STEP = 10
-const PRIORITY_ORDER: TodoPriority[] = ['none', 'low', 'medium', 'high', 'urgent']
-
-function priorityLabel(priority: TodoPriority, t: (key: string) => string): string {
-  switch (priority) {
-    case 'low':
-      return t('priority.low')
-    case 'medium':
-      return t('priority.medium')
-    case 'high':
-      return t('priority.high')
-    case 'urgent':
-      return t('priority.urgent')
-    default:
-      return t('filter.none')
-  }
-}
 
 function priorityClasses(priority: TodoPriority): string {
   switch (priority) {
@@ -131,177 +112,6 @@ function priorityClasses(priority: TodoPriority): string {
     default:
       return 'border border-border bg-transparent text-muted-foreground'
   }
-}
-
-
-function labelClasses(color: TodoLabel['color']): string {
-  switch (color) {
-    case 'slate':
-      return 'border border-slate-700/30 bg-slate-500/15 text-slate-700 dark:text-slate-300 dark:border-slate-500/30'
-    case 'blue':
-      return 'border border-blue-700/30 bg-blue-500/15 text-blue-700 dark:text-blue-300 dark:border-blue-500/30'
-    case 'green':
-      return 'border border-green-700/30 bg-green-500/15 text-green-700 dark:text-green-300 dark:border-green-500/30'
-    case 'orange':
-      return 'border border-orange-700/30 bg-orange-500/15 text-orange-700 dark:text-orange-300 dark:border-orange-500/30'
-    case 'rose':
-      return 'border border-rose-700/30 bg-rose-500/15 text-rose-700 dark:text-rose-300 dark:border-rose-500/30'
-    case 'violet':
-      return 'border border-violet-700/30 bg-violet-500/15 text-violet-700 dark:text-violet-300 dark:border-violet-500/30'
-    default:
-      return 'border border-border bg-muted text-muted-foreground'
-  }
-}
-
-function reminderBadgeClasses(variant: 'destructive' | 'blue' | 'default'): string {
-  switch (variant) {
-    case 'destructive':
-      return 'border border-red-700/30 bg-red-500/15 text-red-700 hover:bg-red-500/20 dark:border-red-500/30 dark:text-red-400'
-    case 'blue':
-      return 'border border-blue-700/30 bg-blue-500/15 text-blue-700 dark:border-blue-500/30 dark:text-blue-400'
-    case 'default':
-      return 'border border-border bg-muted text-foreground'
-  }
-}
-
-function getTodayAtDefaultHour(): number {
-  const now = new Date()
-  now.setHours(18, 0, 0, 0)
-  return now.getTime()
-}
-
-function getTomorrowAtDefaultHour(): number {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  tomorrow.setHours(9, 0, 0, 0)
-  return tomorrow.getTime()
-}
-
-function getReminderBadgeStyle(
-  timestamp: number, 
-  t: (key: string, options?: { count?: number; time?: string }) => string,
-  i18n: { language: string }
-): {
-  label: string
-  variant: 'destructive' | 'blue' | 'default'
-} {
-  const reminderDate = new Date(timestamp)
-  const now = new Date()
-  
-  // Comparer le timestamp complet (date + heure)
-  const isPast = timestamp < now.getTime()
-  
-  // Comparer juste les jours pour afficher le bon label
-  const reminderDay = new Date(reminderDate)
-  reminderDay.setHours(0, 0, 0, 0)
-  
-  const todayDay = new Date(now)
-  todayDay.setHours(0, 0, 0, 0)
-  
-  const dayMs = 24 * 60 * 60 * 1000
-  const dayDiff = Math.round((reminderDay.getTime() - todayDay.getTime()) / dayMs)
-  
-  // Get locale for date formatting
-  const locale = i18n.language === 'fr' ? 'fr-FR' : i18n.language === 'es' ? 'es-ES' : i18n.language === 'zh' ? 'zh-CN' : i18n.language === 'hi' ? 'hi-IN' : 'en-US'
-  
-  // Aujourd'hui
-  if (dayDiff === 0) {
-    const timeStr = reminderDate.toLocaleTimeString(locale, {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    // Rouge si l'heure est passée, bleu sinon
-    return { 
-      label: `${t('time.today')} ${timeStr}`, 
-      variant: isPast ? 'destructive' : 'blue' 
-    }
-  }
-  
-  // Passé (hier ou avant)
-  if (dayDiff < 0) {
-    const absDays = Math.abs(dayDiff)
-    
-    if (absDays === 1) {
-      return { label: t('time.ago1Day'), variant: 'destructive' }
-    }
-    
-    if (absDays < 7) {
-      return { label: t('time.agoDays', { count: absDays }), variant: 'destructive' }
-    }
-    
-    const weeks = Math.floor(absDays / 7)
-    if (weeks < 52) {
-      return { 
-        label: weeks === 1 ? t('time.ago1Week') : t('time.agoWeeks', { count: weeks }), 
-        variant: 'destructive' 
-      }
-    }
-    
-    const years = Math.floor(absDays / 365)
-    return { 
-      label: years === 1 ? t('time.ago1Year') : t('time.agoYears', { count: years }), 
-      variant: 'destructive' 
-    }
-  }
-  
-  // Futur (demain ou après)
-  const dateStr = reminderDate.toLocaleDateString(locale, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  })
-  const timeStr = reminderDate.toLocaleTimeString(locale, {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-  
-  return { label: `${dateStr} ${timeStr}`, variant: 'default' }
-}
-
-
-function buildTodoWithDepth(todos: Todo[]): TodoWithDepth[] {
-  const todosById = new Map(todos.map((todo) => [todo.id, todo]))
-  const childrenByParent = new Map<string, Todo[]>()
-
-  for (const todo of todos) {
-    if (!todo.parentId || !todosById.has(todo.parentId)) {
-      continue
-    }
-
-    const siblings = childrenByParent.get(todo.parentId) ?? []
-    siblings.push(todo)
-    childrenByParent.set(todo.parentId, siblings)
-  }
-
-  const roots = todos.filter((todo) => !todo.parentId || !todosById.has(todo.parentId))
-  const ordered: TodoWithDepth[] = []
-  const visited = new Set<string>()
-
-  const walk = (todo: Todo, depth: number) => {
-    if (visited.has(todo.id)) {
-      return
-    }
-
-    visited.add(todo.id)
-    ordered.push({ todo, depth })
-
-    const children = childrenByParent.get(todo.id) ?? []
-    for (const child of children) {
-      walk(child, depth + 1)
-    }
-  }
-
-  for (const root of roots) {
-    walk(root, 0)
-  }
-
-  for (const orphan of todos) {
-    if (!visited.has(orphan.id)) {
-      walk(orphan, 0)
-    }
-  }
-
-  return ordered
 }
 
 type SortableTodoItemProps = {
@@ -372,64 +182,6 @@ function SortableTodoItem({
     >
       {children}
     </motion.li>
-  )
-}
-
-// Component to render the dragged item in the overlay
-type DragOverlayContentProps = {
-  todo: Todo
-  priority: TodoPriority
-  labelById: Map<string, TodoLabel>
-}
-
-function DragOverlayContent({ todo, priority, labelById }: DragOverlayContentProps) {
-  const { t } = useTranslation()
-  const label = todo.labelId ? labelById.get(todo.labelId) : undefined
-  
-  return (
-    <div className={cn(
-      'flex items-start gap-1.5 rounded-md px-1 py-1 bg-background border-2 border-primary shadow-2xl cursor-grabbing',
-      priority === 'urgent' ? 'ring-2 ring-destructive/50' : undefined,
-    )}>
-      <Checkbox className="mt-0.5" checked={false} disabled />
-      <div className="min-w-0 flex-1 overflow-hidden">
-        <p className="text-sm text-foreground line-clamp-2 break-all max-w-[400px]">
-          {todo.title}
-        </p>
-        {(todo.reminderAt || priority !== 'none' || label) && (
-          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-            {priority !== 'none' ? (
-              <Badge
-                variant="ghost"
-                className={cn(
-                  'h-5 px-1.5 py-0 rounded-md',
-                  priorityClasses(priority),
-                )}
-              >
-                {priority === 'urgent' ? <AlertTriangle className="h-3 w-3" /> : null}
-                {priorityLabel(priority, t)}
-              </Badge>
-            ) : null}
-            {label ? (
-              <Badge
-                variant="ghost"
-                className={cn(
-                  'h-5 px-1.5 py-0 rounded-md',
-                  labelClasses(label.color),
-                )}
-              >
-                <Tags className="h-3 w-3" />
-                {label.name}
-              </Badge>
-            ) : null}
-          </div>
-        )}
-      </div>
-      <Star className={cn(
-        'h-3.5 w-3.5 mt-1',
-        todo.starred ? 'fill-foreground' : 'text-muted-foreground'
-      )} />
-    </div>
   )
 }
 
@@ -706,39 +458,6 @@ export function TodoList({
     setDateMode(null)
   }
 
-  const onEditorBlur = (event: FocusEvent<HTMLDivElement>) => {
-    const nextFocused = event.relatedTarget
-    if (nextFocused && event.currentTarget.contains(nextFocused)) {
-      return
-    }
-
-    window.setTimeout(() => {
-      const root = editorContainerRef.current
-      if (!root) {
-        return
-      }
-
-      // macOS may not focus buttons on click; keep editor open for recent internal pointer interactions.
-      if (window.performance.now() - lastPointerInsideEditorAtRef.current < 200) {
-        return
-      }
-
-      const active = document.activeElement
-      if (active && root.contains(active)) {
-        return
-      }
-
-      void persistAndMaybeClose(true)
-    }, 0)
-  }
-
-  const applyReminder = (timestamp: number | undefined) => {
-    setDraft((previous) => ({
-      ...previous,
-      reminderAt: timestamp,
-    }))
-  }
-
   const normalizeDateLabel = (label: string): string => {
     return label.replace(',', '').replace(/\s+/g, ' ').trim()
   }
@@ -853,288 +572,33 @@ export function TodoList({
     setOverId(null)
   }
 
-  const renderEditorRow = (targetId: string | 'new', depth = 0) => {
-    const isExistingTodo = targetId !== 'new'
-    const detailsInputVisible = showDetails || draft.details.trim().length > 0
-    const leftOffset = Math.min(depth, 6) * 16
-    const reminderBadgeStyle = draft.reminderAt ? getReminderBadgeStyle(draft.reminderAt, t, i18n) : null
-
-    return (
-      <li
-        key={targetId === 'new' ? 'new-editor' : `editor-${targetId}`}
-        className="py-1"
-        style={leftOffset > 0 ? { paddingLeft: `${leftOffset + 8}px` } : undefined}
-      >
-        <div
-          ref={editorContainerRef}
-          className="flex items-start gap-1.5 rounded-md bg-background px-2 py-2"
-          onPointerDownCapture={() => {
-            lastPointerInsideEditorAtRef.current = window.performance.now()
-          }}
-          onBlur={onEditorBlur}
-        >
-          {isExistingTodo ? (
-            <Checkbox
-              className="mt-2"
-              checked={false}
-              onCheckedChange={async () => {
-                await onSetCompleted(targetId, true)
-                closeEditor()
-              }}
-              aria-label={t('todo.markAsCompleted')}
-            />
-          ) : (
-            <Checkbox className="mt-2" checked={false} disabled aria-label={t('todo.newTask')} />
-          )}
-
-          <div className="min-w-0 flex-1 space-y-1.5">
-            {/* Ligne 1: Titre */}
-            <Textarea
-              ref={(node) => {
-                titleInputRef.current = node
-                composeInputRef.current = node
-              }}
-              value={draft.title}
-              onChange={(event) => {
-                setSaveError(null)
-                const newValue = event.target.value
-                if (newValue.length <= 1000) {
-                  setDraft((previous) => ({
-                    ...previous,
-                    title: newValue,
-                  }))
-                  
-                  // Auto-resize immediately during typing
-                  const target = event.target
-                  target.style.height = 'auto'
-                  target.style.height = `${Math.min(target.scrollHeight, 120)}px`
-                }
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Tab' && !event.shiftKey) {
-                  event.preventDefault()
-                  setShowDetails(true)
-                  setTimeout(() => detailsInputRef.current?.focus(), 0)
-                  return
-                }
-
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault()
-                  void persistAndMaybeClose(true, true) // reopen after create
-                }
-
-                if (event.key === 'Escape') {
-                  event.preventDefault()
-                  event.stopPropagation() // Prevent window from closing
-                  closeEditor()
-                }
-              }}
-              placeholder={t('todo.taskTitle')}
-              maxLength={1000}
-              rows={1}
-              className="min-h-[32px] max-h-[120px] resize-none overflow-y-auto border-none bg-transparent px-0 py-1 text-sm shadow-none focus-visible:ring-0"
-            />
-
-            {/* Ligne 2: Détails */}
-            <div className="flex items-center gap-1.5">
-              {!detailsInputVisible && (
-                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              )}
-              {detailsInputVisible ? (
-                <Input
-                  ref={detailsInputRef}
-                  value={draft.details}
-                  onChange={(event) => {
-                    setSaveError(null)
-                    setDraft((previous) => ({
-                      ...previous,
-                      details: event.target.value,
-                    }))
-                  }}
-                  onBlur={(event) => {
-                    if (!event.target.value.trim()) {
-                      setShowDetails(false)
-                    }
-                  }}
-                  placeholder={t('todo.detail')}
-                  className="h-6 border-none bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDetails(true)
-                    setTimeout(() => detailsInputRef.current?.focus(), 0)
-                  }}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {t('todo.detail')}
-                </button>
-              )}
-            </div>
-
-            {/* Ligne 3: Date rapide */}
-            <div className="flex items-center gap-2">
-              {draft.reminderAt ? (
-                <div className="inline-flex items-center gap-1">
-                  {/* Badge de date avec couleurs conditionnelles et bouton × intégré */}
-                  <Popover modal={false} open={showDate && dateMode === 'datetime'} onOpenChange={(open) => {
-                    setShowDate(open)
-                    if (!open) {
-                      setDateMode(null)
-                    }
-                  }}>
-                    <PopoverTrigger asChild>
-                      <Badge
-                        asChild
-                        variant="ghost"
-                        className={cn(
-                          "cursor-pointer rounded-md h-6 px-2 gap-1.5",
-                          reminderBadgeStyle && reminderBadgeClasses(reminderBadgeStyle.variant),
-                          reminderBadgeStyle?.variant === 'destructive' && "hover:bg-red-500/20",
-                          reminderBadgeStyle?.variant === 'blue' && "hover:bg-blue-500/20",
-                          reminderBadgeStyle?.variant === 'default' && "hover:bg-muted/60"
-                        )}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSaveError(null)
-                            setShowDate(true)
-                            setDateMode('datetime')
-                          }}
-                        >
-                          <CalendarClock className="h-3 w-3" />
-                          {reminderBadgeStyle?.label}
-                        </button>
-                      </Badge>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <DateTimePicker
-                        date={new Date(draft.reminderAt)}
-                        onDateTimeChange={(date) => {
-                          applyReminder(date.getTime())
-                        }}
-                        onClose={() => {
-                          setShowDate(false)
-                          setDateMode(null)
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSaveError(null)
-                      applyReminder(undefined)
-                    }}
-                    aria-label={t('todo.removeDate')}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {/* Boutons rapides: Aujourd'hui | Demain | Calendrier */}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    tabIndex={0}
-                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
-                    onClick={() => {
-                      setSaveError(null)
-                      applyReminder(getTodayAtDefaultHour())
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        setSaveError(null)
-                        applyReminder(getTodayAtDefaultHour())
-                      }
-                    }}
-                  >
-                    {t('time.today')}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">|</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    tabIndex={0}
-                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
-                    onClick={() => {
-                      setSaveError(null)
-                      applyReminder(getTomorrowAtDefaultHour())
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        setSaveError(null)
-                        applyReminder(getTomorrowAtDefaultHour())
-                      }
-                    }}
-                  >
-                    {t('time.tomorrow')}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">|</span>
-                  <Popover modal={false} open={showDate && dateMode === 'datetime'} onOpenChange={(open) => {
-                    setShowDate(open)
-                    if (!open) {
-                      setDateMode(null)
-                    }
-                  }}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        tabIndex={0}
-                        className="h-6 w-6 p-0 focus-visible:ring-1 focus-visible:ring-ring"
-                        onClick={() => {
-                          setSaveError(null)
-                          setShowDate(true)
-                          setDateMode('datetime')
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault()
-                            setSaveError(null)
-                            setShowDate(true)
-                            setDateMode('datetime')
-                          }
-                        }}
-                      >
-                        <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <DateTimePicker
-                        date={draft.reminderAt ? new Date(draft.reminderAt) : undefined}
-                        onDateTimeChange={(date) => {
-                          applyReminder(date.getTime())
-                        }}
-                        onClose={() => {
-                          setShowDate(false)
-                          setDateMode(null)
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </>
-              )}
-            </div>
-
-            {saveError ? <p className="text-xs text-muted-foreground">{`Échec de sauvegarde: ${saveError}`}</p> : null}
-          </div>
-        </div>
-      </li>
-    )
-  }
+  const renderEditorRow = (targetId: string | 'new', depth = 0) => (
+    <TodoInlineEditor
+      key={targetId === 'new' ? 'new-editor' : `editor-${targetId}`}
+      targetId={targetId}
+      depth={depth}
+      draft={draft}
+      showDetails={showDetails}
+      showDate={showDate}
+      dateMode={dateMode}
+      saveError={saveError}
+      editorContainerRef={editorContainerRef}
+      titleInputRef={titleInputRef}
+      detailsInputRef={detailsInputRef}
+      composeInputRef={composeInputRef}
+      lastPointerInsideEditorAtRef={lastPointerInsideEditorAtRef}
+      onTitleChange={(value) => { setSaveError(null); setDraft((prev) => ({ ...prev, title: value })) }}
+      onDetailsChange={(value) => { setSaveError(null); setDraft((prev) => ({ ...prev, details: value })) }}
+      onShowDetailsChange={setShowDetails}
+      onShowDateChange={setShowDate}
+      onDateModeChange={setDateMode}
+      onSaveErrorChange={setSaveError}
+      onApplyReminder={(timestamp) => setDraft((prev) => ({ ...prev, reminderAt: timestamp }))}
+      onPersistAndClose={persistAndMaybeClose}
+      onClose={closeEditor}
+      onSetCompleted={onSetCompleted}
+    />
+  )
 
   const visibleCompletedItems = completedExpanded
     ? completedItems.slice(0, completedVisibleCount)
@@ -1285,104 +749,18 @@ export function TodoList({
                             )}
                           </button>
 
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                aria-label={t('todo.actionsFor', { title: todo.title })}
-                              >
-                                <Ellipsis className="h-3.5 w-3.5" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-52">
-                              <DropdownMenuSub>
-                                <DropdownMenuSubTrigger>{t('todo.priority')}</DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent className="w-40">
-                                  {PRIORITY_ORDER.map((option) => (
-                                    <DropdownMenuItem
-                                      key={option}
-                                      className={cn(option === priority ? 'font-medium' : undefined)}
-                                      onSelect={() => {
-                                        void onSetPriority(todo.id, option)
-                                      }}
-                                    >
-                                      {priorityLabel(option, t)}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuSubContent>
-                              </DropdownMenuSub>
-                              <DropdownMenuSub>
-                                <DropdownMenuSubTrigger>{t('todo.label')}</DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent className="w-44">
-                                  <DropdownMenuItem
-                                    className={cn(!label ? 'font-medium' : undefined)}
-                                    onSelect={() => {
-                                      void onSetLabel(todo.id, undefined)
-                                    }}
-                                  >
-                                    {t('todo.noLabel')}
-                                  </DropdownMenuItem>
-                                  {labels.map((item) => (
-                                    <DropdownMenuItem
-                                      key={item.id}
-                                      className={cn(item.id === todo.labelId ? 'font-medium' : undefined)}
-                                      onSelect={() => {
-                                        void onSetLabel(todo.id, item.id)
-                                      }}
-                                    >
-                                      {item.name}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuSubContent>
-                              </DropdownMenuSub>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onSelect={() => {
-                                  void openTodoEditor(todo, { showDate: true })
-                                }}
-                              >
-                                {t('todo.addDueDate')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() => {
-                                  void openCreateEditor(todo.id)
-                                }}
-                              >
-                                {t('todo.addSubtask')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() => {
-                                  void onDelete(todo.id)
-                                }}
-                              >
-                                {t('common.delete')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuLabel className="px-2 py-1 text-xs text-muted-foreground">
-                                {t('todo.moveToList')}
-                              </DropdownMenuLabel>
-                              {lists.map((list) => {
-                                const isCurrentList = (todo.listId ?? activeListId) === list.id
-                                return (
-                                  <DropdownMenuItem
-                                    key={`move-${todo.id}-${list.id}`}
-                                    className="flex items-center justify-between gap-2"
-                                    onSelect={() => {
-                                      if (!isCurrentList) {
-                                        void onMoveToList(todo.id, list.id)
-                                      }
-                                    }}
-                                  >
-                                    <span className="truncate">{list.name}</span>
-                                    {isCurrentList ? <Check className="h-3.5 w-3.5" /> : null}
-                                  </DropdownMenuItem>
-                                )
-                              })}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <TodoContextMenu
+                            todo={todo}
+                            lists={lists}
+                            labels={labels}
+                            activeListId={activeListId}
+                            onSetPriority={onSetPriority}
+                            onSetLabel={onSetLabel}
+                            onDelete={onDelete}
+                            onMoveToList={onMoveToList}
+                            onOpenDateEditor={() => void openTodoEditor(todo, { showDate: true })}
+                            onOpenSubtaskEditor={() => void openCreateEditor(todo.id)}
+                          />
 
                           <Button
                             type="button"

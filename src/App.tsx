@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BarChart3, Check, ChevronDown, Filter, Home, MoreHorizontal, Plus, Printer, Settings, Star, Trash2 } from 'lucide-react'
+import { ChevronDown, Home, Plus, Settings, Star } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { listen } from '@tauri-apps/api/event'
-import { open } from '@tauri-apps/plugin-shell'
 import { useTranslation } from 'react-i18next'
 import { SettingsPage } from '@/components/settings-page'
 import { StatisticsPage } from '@/components/statistics-page'
 import { TodoList } from '@/components/todo-list'
 import { UpdateBanner } from '@/components/update-banner'
 import { Onboarding } from '@/components/onboarding/Onboarding'
+import { AppFooter } from '@/features/todos/components/AppFooter'
+import { FilterBar } from '@/features/todos/components/FilterBar'
+import { ListSettingsMenu } from '@/features/todos/components/ListSettingsMenu'
 import { IconPicker, getIconComponent } from '@/components/icon-picker'
 import { Toaster } from '@/components/ui/toaster'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -27,106 +29,21 @@ import { useWindowBehavior } from '@/hooks/use-window-behavior'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { useTodoStore } from '@/store/use-todo-store'
 import { useUpdateStore } from '@/store/use-update-store'
+import { useFilteredTodos } from '@/hooks/useFilteredTodos'
 import { setWindowWidth, isOverlayWindow } from '@/lib/tauri'
 import { cn } from '@/lib/utils'
-import type { SortMode, Todo, TodoPriority } from '@/types/todo'
-
-function compareTodoOrder(
-  left: Todo,
-  right: Todo,
-  sortOrder: 'asc' | 'desc',
-): number {
-  const leftHasManualOrder = typeof left.sortIndex === 'number'
-  const rightHasManualOrder = typeof right.sortIndex === 'number'
-
-  if (leftHasManualOrder && rightHasManualOrder && left.sortIndex !== right.sortIndex) {
-    return (left.sortIndex ?? 0) - (right.sortIndex ?? 0)
-  }
-
-  // Si une tâche a un sortIndex et l'autre non:
-  // Les tâches SANS sortIndex (nouvelles) viennent EN PREMIER
-  if (leftHasManualOrder !== rightHasManualOrder) {
-    return leftHasManualOrder ? 1 : -1
-  }
-
-  // ASC: plus anciens en premier
-  if (sortOrder === 'asc') {
-    return left.createdAt - right.createdAt
-  }
-
-  // DESC: plus récents en premier
-  return right.createdAt - left.createdAt
-}
-
-function sortTodos(todos: Todo[], sortMode: SortMode, sortOrder: 'asc' | 'desc'): Todo[] {
-  return [...todos].sort((a, b) => {
-    const starredDelta = Number(Boolean(b.starred)) - Number(Boolean(a.starred))
-    if (starredDelta !== 0) {
-      return starredDelta
-    }
-
-    switch (sortMode) {
-      case 'manual':
-        return compareTodoOrder(a, b, sortOrder)
-      case 'oldest':
-        return a.createdAt - b.createdAt
-      case 'title':
-        return a.title.localeCompare(b.title, 'fr-FR', { sensitivity: 'base' })
-      case 'dueDate': {
-        const leftDue = a.reminderAt
-        const rightDue = b.reminderAt
-        if (typeof leftDue === 'number' && typeof rightDue === 'number') {
-          if (leftDue !== rightDue) {
-            return leftDue - rightDue
-          }
-          return b.createdAt - a.createdAt
-        }
-        if (typeof leftDue === 'number') {
-          return -1
-        }
-        if (typeof rightDue === 'number') {
-          return 1
-        }
-        return b.createdAt - a.createdAt
-      }
-      case 'recent':
-      default:
-        return b.createdAt - a.createdAt
-    }
-  })
-}
 
 export default function App() {
   const inputRef = useRef<HTMLInputElement>(null)
   const listNameInputRef = useRef<HTMLInputElement>(null)
   const [renamingListId, setRenamingListId] = useState<string | null>(null)
   const [listNameDraft, setListNameDraft] = useState('')
-  const [favoritesOnly, setFavoritesOnly] = useState(false)
-  const [priorityFilter, setPriorityFilter] = useState<TodoPriority | 'all'>('all')
-  const [labelFilterId, setLabelFilterId] = useState<string | 'all'>('all')
   const [settingsPageOpen, setSettingsPageOpen] = useState(false)
   const [statisticsPageOpen, setStatisticsPageOpen] = useState(false)
 
   const { toast } = useToast()
   const { playAdd, playDelete, playComplete } = useSoundEffects()
   const { t, i18n } = useTranslation()
-
-  const PRIORITY_FILTERS: Array<{ id: TodoPriority | 'all'; label: string }> = useMemo(() => [
-    { id: 'all', label: t('filter.allPriorities') },
-    { id: 'urgent', label: t('filter.urgent') },
-    { id: 'high', label: t('filter.high') },
-    { id: 'medium', label: t('filter.medium') },
-    { id: 'low', label: t('filter.low') },
-    { id: 'none', label: t('filter.none') },
-  ], [t])
-
-  const SORT_MODE_OPTIONS: Array<{ id: SortMode; label: string }> = useMemo(() => [
-    { id: 'manual', label: t('sort.manual') },
-    { id: 'recent', label: t('sort.recent') },
-    { id: 'oldest', label: t('sort.oldest') },
-    { id: 'title', label: t('sort.title') },
-    { id: 'dueDate', label: t('sort.dueDate') },
-  ], [t])
 
   const {
     hydrated,
@@ -155,6 +72,24 @@ export default function App() {
   } = useTodoStore()
 
   const { checkForUpdate } = useUpdateStore()
+
+  const {
+    activeList,
+    favoritesOnly,
+    priorityFilter,
+    labelFilterId: effectiveLabelFilterId,
+    sortedTodos,
+    activeTodos,
+    completedTodos,
+    canReorder: canReorderBase,
+    PRIORITY_FILTERS,
+    SORT_MODE_OPTIONS,
+    setFavoritesOnly,
+    setPriorityFilter,
+    setLabelFilterId,
+  } = useFilteredTodos(todos, settings)
+
+  const canReorder = !settingsPageOpen && canReorderBase
 
   // Sync language with i18n when settings change
   useEffect(() => {
@@ -219,7 +154,8 @@ export default function App() {
     }
     
     void initializeWindowWidth()
-  }, [hydrated]) // Only run on hydration, not when settingsPageOpen changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated])
 
   // Listen for data-reset event from backend
   useEffect(() => {
@@ -286,56 +222,6 @@ export default function App() {
       root.classList.add('theme-dark')
     }
   }, [settings.themeMode])
-
-  const activeList = useMemo(() => {
-    if (settings.lists.length === 0) {
-      return undefined
-    }
-    return settings.lists.find((list) => list.id === settings.activeListId) ?? settings.lists[0]
-  }, [settings.activeListId, settings.lists])
-
-  const listScopedTodos = useMemo(() => {
-    if (!activeList) {
-      return [] as Todo[]
-    }
-    return todos.filter((todo) => (todo.listId ?? activeList.id) === activeList.id)
-  }, [activeList, todos])
-
-  const sortedTodos = useMemo(
-    () => sortTodos(listScopedTodos, settings.sortMode, settings.sortOrder),
-    [listScopedTodos, settings.sortMode, settings.sortOrder],
-  )
-
-  const effectiveLabelFilterId = useMemo(
-    () =>
-      labelFilterId !== 'all' && !settings.labels.some((label) => label.id === labelFilterId)
-        ? 'all'
-        : labelFilterId,
-    [labelFilterId, settings.labels],
-  )
-
-  const visibleTodos = useMemo(
-    () =>
-      sortedTodos
-        .filter((todo) => (favoritesOnly ? todo.starred : true))
-        .filter((todo) =>
-          priorityFilter === 'all' ? true : (todo.priority ?? 'none') === priorityFilter,
-        )
-        .filter((todo) =>
-          effectiveLabelFilterId === 'all' ? true : todo.labelId === effectiveLabelFilterId,
-        ),
-    [effectiveLabelFilterId, favoritesOnly, priorityFilter, sortedTodos],
-  )
-
-  const activeTodos = useMemo(
-    () => visibleTodos.filter((todo) => typeof todo.completedAt !== 'number'),
-    [visibleTodos],
-  )
-
-  const completedTodos = useMemo(
-    () => visibleTodos.filter((todo) => typeof todo.completedAt === 'number'),
-    [visibleTodos],
-  )
 
   const persistListRename = async () => {
     if (!activeList || renamingListId !== activeList.id) {
@@ -416,25 +302,6 @@ export default function App() {
     popup.print()
     popup.close()
   }
-
-  const selectedPriorityFilterLabel = useMemo(
-    () => PRIORITY_FILTERS.find((option) => option.id === priorityFilter)?.label ?? t('filter.allPriorities'),
-    [priorityFilter, t, PRIORITY_FILTERS],
-  )
-
-  const selectedLabelFilterName = useMemo(() => {
-    if (effectiveLabelFilterId === 'all') {
-      return t('filter.allLabels')
-    }
-    return settings.labels.find((label) => label.id === effectiveLabelFilterId)?.name ?? t('filter.allLabels')
-  }, [effectiveLabelFilterId, settings.labels, t])
-
-  const canReorder =
-    !settingsPageOpen &&
-    settings.sortMode === 'manual' &&
-    !favoritesOnly &&
-    priorityFilter === 'all' &&
-    effectiveLabelFilterId === 'all'
 
   // Afficher l'onboarding si nécessaire
   if (showOnboarding) {
@@ -577,7 +444,7 @@ export default function App() {
                   size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-foreground"
                   onClick={() => {
-                    setFavoritesOnly((current) => !current)
+                    setFavoritesOnly(!favoritesOnly)
                   }}
                   aria-label={favoritesOnly ? t('filter.showAllTasks') : t('filter.showFavoritesOnly')}
                 >
@@ -588,81 +455,20 @@ export default function App() {
                 <p>{favoritesOnly ? t('filter.showAllTasks') : t('filter.showFavoritesOnly')}</p>
               </TooltipContent>
             </Tooltip>
-            <DropdownMenu>
-              <Tooltip>
-                <DropdownMenuTrigger asChild>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                      aria-label={t('list.listSettings')}
-                    >
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                </DropdownMenuTrigger>
-                <TooltipContent>
-                  <p>{t('list.sortAndDisplayOptions')}</p>
-                </TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel>{t('list.listSettings')}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {SORT_MODE_OPTIONS.map((option) => (
-                  <DropdownMenuItem
-                    key={option.id}
-                    className="flex items-center justify-between gap-2"
-                    onSelect={() => {
-                      void updateSettings({ sortMode: option.id })
-                    }}
-                  >
-                    <span>{option.label}</span>
-                    {settings.sortMode === option.id ? <Check className="h-3.5 w-3.5" /> : null}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                {activeList ? (
-                  <>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        setRenamingListId(activeList.id)
-                        setListNameDraft(activeList.name)
-                      }}
-                    >
-                      {t('list.renameAndChangeIcon')}
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
-                <DropdownMenuItem
-                  onSelect={() => {
-                    printCurrentList()
-                  }}
-                >
-                  <Printer className="mr-2 h-3.5 w-3.5" />
-                  {t('list.printList')}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => {
-                    setStatisticsPageOpen(true)
-                  }}
-                >
-                  <BarChart3 className="mr-2 h-3.5 w-3.5" />
-                  {t('statistics.title')}
-                </DropdownMenuItem>
-                {activeList ? (
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      void clearCompletedInList(activeList.id)
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-3.5 w-3.5" />
-                    {t('list.deleteCompletedTasks')}
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ListSettingsMenu
+              activeList={activeList}
+              sortMode={settings.sortMode}
+              sortModeOptions={SORT_MODE_OPTIONS}
+              onSetSortMode={(mode) => void updateSettings({ sortMode: mode })}
+              onRenameList={() => {
+                if (!activeList) return
+                setRenamingListId(activeList.id)
+                setListNameDraft(activeList.name)
+              }}
+              onPrintList={printCurrentList}
+              onOpenStatistics={() => setStatisticsPageOpen(true)}
+              onClearCompleted={() => { if (activeList) void clearCompletedInList(activeList.id) }}
+            />
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -709,91 +515,21 @@ export default function App() {
         </Tooltip>
         </div>
 
-        {/* Filtres - Background distinct, visible seulement si pas dans settings */}
         {!settingsPageOpen && !statisticsPageOpen ? (
-          <div className="flex items-center gap-2 border-b border-border bg-muted/20 px-4 py-2">
-            <DropdownMenu>
-              <Tooltip>
-                <DropdownMenuTrigger asChild>
-                  <TooltipTrigger asChild>
-                    <Button type="button" variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs">
-                      <Filter className="h-3.5 w-3.5" />
-                      {selectedPriorityFilterLabel}
-                    </Button>
-                  </TooltipTrigger>
-                </DropdownMenuTrigger>
-                <TooltipContent>
-                  <p>{t('filter.filterByPriority')}</p>
-                </TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="start" className="w-44">
-                {PRIORITY_FILTERS.map((option) => (
-                  <DropdownMenuItem
-                    key={option.id}
-                    className={cn(option.id === priorityFilter ? 'font-medium' : undefined)}
-                    onSelect={() => {
-                      setPriorityFilter(option.id)
-                    }}
-                  >
-                    {option.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <Tooltip>
-                <DropdownMenuTrigger asChild>
-                  <TooltipTrigger asChild>
-                    <Button type="button" variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs">
-                      {selectedLabelFilterName}
-                    </Button>
-                  </TooltipTrigger>
-                </DropdownMenuTrigger>
-                <TooltipContent>
-                  <p>{t('filter.filterByLabel')}</p>
-                </TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="start" className="w-44">
-                <DropdownMenuItem
-                  className={cn(effectiveLabelFilterId === 'all' ? 'font-medium' : undefined)}
-                  onSelect={() => {
-                    setLabelFilterId('all')
-                  }}
-                >
-                  {t('filter.allLabels')}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {settings.labels.map((label) => (
-                  <DropdownMenuItem
-                    key={label.id}
-                    className={cn(effectiveLabelFilterId === label.id ? 'font-medium' : undefined)}
-                    onSelect={() => {
-                      setLabelFilterId(label.id)
-                    }}
-                  >
-                    {label.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {(favoritesOnly || priorityFilter !== 'all' || effectiveLabelFilterId !== 'all') ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={() => {
-                  setFavoritesOnly(false)
-                  setPriorityFilter('all')
-                  setLabelFilterId('all')
-                }}
-              >
-                {t('filter.reset')}
-              </Button>
-            ) : null}
-          </div>
+          <FilterBar
+            favoritesOnly={favoritesOnly}
+            priorityFilter={priorityFilter}
+            effectiveLabelFilterId={effectiveLabelFilterId}
+            labels={settings.labels}
+            priorityFilters={PRIORITY_FILTERS}
+            onSetPriorityFilter={setPriorityFilter}
+            onSetLabelFilterId={setLabelFilterId}
+            onResetFilters={() => {
+              setFavoritesOnly(false)
+              setPriorityFilter('all')
+              setLabelFilterId('all')
+            }}
+          />
         ) : null}
 
         {/* Zone principale - Liste des tâches avec background blanc/card */}
@@ -877,31 +613,11 @@ export default function App() {
           )}
         </div>
 
-        {/* Footer - Background distinct */}
-        <div className="border-t border-border bg-muted/30 px-4 py-2 text-[11px] text-muted-foreground">
-          {error ? (
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-destructive">Erreur: {error}</p>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="font-medium">{settings.globalShortcut}</span>
-                <span className="text-muted-foreground/60">·</span>
-                <span>Tri: {selectedSortModeLabel}</span>
-              </div>
-              <button
-                onClick={() => {
-                  void open('https://github.com/simcmoi/blinkdo')
-                }}
-                className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              >
-                <Star className="h-3 w-3" />
-                <span>Star on GitHub</span>
-              </button>
-            </div>
-          )}
-        </div>
+        <AppFooter
+          error={error}
+          globalShortcut={settings.globalShortcut}
+          sortModeLabel={selectedSortModeLabel}
+        />
       </motion.section>
       <Toaster />
     </main>

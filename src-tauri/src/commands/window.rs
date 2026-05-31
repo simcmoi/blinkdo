@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::commands::helpers::lock_error;
-use crate::storage::{AppData, AppState, STORAGE_FILE_NAME};
+use crate::storage::{AppData, AppState, DB_FILE_NAME, STORAGE_FILE_NAME};
 
 #[tauri::command]
 pub fn set_window_width(app: AppHandle, width: f64) -> Result<(), String> {
@@ -117,8 +117,11 @@ pub fn reset_all_data(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
     crate::shortcuts::replace_registered_shortcut(&app, crate::storage::DEFAULT_GLOBAL_SHORTCUT).ok();
 
     let app_dir = app.path().app_data_dir().map_err(|e| format!("failed to resolve appDataDir: {e}"))?;
-    let path = app_dir.join(STORAGE_FILE_NAME);
-    if path.exists() { std::fs::remove_file(&path).map_err(|e| format!("failed to delete data file: {e}"))?; }
+
+    for file in [STORAGE_FILE_NAME, DB_FILE_NAME, "todos.json.bak"] {
+        let path = app_dir.join(file);
+        if path.exists() { std::fs::remove_file(&path).map_err(|e| format!("failed to delete {file}: {e}"))?; }
+    }
 
     app.emit("data-reset", ()).ok();
     log::info!("All data has been reset");

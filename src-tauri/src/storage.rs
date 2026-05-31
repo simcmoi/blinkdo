@@ -6,7 +6,10 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
 
+pub mod db;
+
 pub const STORAGE_FILE_NAME: &str = "todos.json";
+pub const DB_FILE_NAME: &str = "blinkdo.db";
 pub const DEFAULT_LIST_ID: &str = "default";
 pub const DEFAULT_GLOBAL_SHORTCUT: &str = "Shift+Space";
 
@@ -367,57 +370,73 @@ fn normalize_data(mut data: AppData) -> AppData {
     data
 }
 
-fn storage_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("failed to resolve appDataDir: {error}"))?;
+fn app_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().app_data_dir()
+        .map_err(|e| format!("failed to resolve appDataDir: {e}"))?;
+    fs::create_dir_all(&dir)
+        .map_err(|e| format!("failed to create appDataDir: {e}"))?;
+    Ok(dir)
+}
 
-    fs::create_dir_all(&app_dir)
-        .map_err(|error| format!("failed to create appDataDir directory: {error}"))?;
+fn json_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app_dir(app)?.join(STORAGE_FILE_NAME))
+}
 
-    Ok(app_dir.join(STORAGE_FILE_NAME))
+fn db_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app_dir(app)?.join(DB_FILE_NAME))
+}
+
+fn migrate_json_to_sqlite(app: &AppHandle, conn: &rusqlite::Connection) -> Result<(), String> {
+    let json_p = json_path(app)?;
+    if !json_p.exists() {
+        return Ok(());
+    }
+
+    log::info!("Migrating data from {} to SQLite", STORAGE_FILE_NAME);
+
+    let raw = fs::read_to_string(&json_p)
+        .map_err(|e| format!("failed to read {}: {e}", json_p.display()))?;
+
+    let data: AppData = serde_json::from_str(&raw)
+        .map_err(|e| format!("failed to parse {}: {e}", json_p.display()))?;
+
+    let normalized = normalize_data(data);
+    db::save(conn, &normalized)
+        .map_err(|e| format!("failed to write SQLite: {e}"))?;
+
+    fs::rename(&json_p, json_p.with_extension("json.bak"))
+        .map_err(|e| format!("failed to backup JSON file: {e}"))?;
+
+    log::info!("Migration complete, JSON backed up to todos.json.bak");
+    Ok(())
 }
 
 pub fn load_or_create(app: &AppHandle) -> Result<AppData, String> {
-    let path = storage_path(app)?;
+    let db_p = db_path(app)?;
+    let conn = db::open(&db_p).map_err(|e| format!("failed to open database: {e}"))?;
+    db::migrate(&conn).map_err(|e| format!("failed to run migrations: {e}"))?;
 
-    if !path.exists() {
-        let data = AppData::default();
-        persist(app, &data)?;
-        return Ok(data);
+    // Migrate from JSON if present
+    migrate_json_to_sqlite(app, &conn)?;
+
+    // Load from SQLite
+    let data = db::load(&conn).map_err(|e| format!("failed to load from database: {e}"))?;
+
+    // If empty, initialize with defaults
+    if data.settings.lists.is_empty() || data.todos.is_empty() && data.settings.lists.is_empty() {
+        let default_data = AppData::default();
+        db::save(&conn, &default_data)
+            .map_err(|e| format!("failed to save defaults: {e}"))?;
+        return Ok(default_data);
     }
 
-    let raw = fs::read_to_string(&path)
-        .map_err(|error| format!("failed to read storage file {}: {error}", path.display()))?;
-
-    match serde_json::from_str::<AppData>(&raw) {
-        Ok(data) => {
-            let normalized = normalize_data(data);
-            persist(app, &normalized)?;
-            Ok(normalized)
-        }
-        Err(error) => {
-            log::warn!(
-                "failed to deserialize storage file {}: {error}; resetting with defaults",
-                path.display()
-            );
-
-            let data = AppData::default();
-            persist(app, &data)?;
-            Ok(data)
-        }
-    }
+    Ok(data)
 }
 
 pub fn persist(app: &AppHandle, data: &AppData) -> Result<(), String> {
-    let path = storage_path(app)?;
-
-    let payload = serde_json::to_string_pretty(data)
-        .map_err(|error| format!("failed to serialize storage payload: {error}"))?;
-
-    fs::write(&path, payload)
-        .map_err(|error| format!("failed to write storage file {}: {error}", path.display()))
+    let db_p = db_path(app)?;
+    let conn = db::open(&db_p).map_err(|e| format!("failed to open database: {e}"))?;
+    db::save(&conn, data).map_err(|e| format!("failed to save to database: {e}"))
 }
 
 pub fn now_millis() -> i64 {

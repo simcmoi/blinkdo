@@ -64,6 +64,7 @@ export function ShortcutsSettings({
   const [isSavingShortcut, setIsSavingShortcut] = useState(false)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShortcutDraft(settings.globalShortcut)
   }, [settings.globalShortcut])
 

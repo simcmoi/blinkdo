@@ -28,10 +28,10 @@ export class LocalStorageProvider implements StorageProvider {
       return data
     } catch (error) {
       console.error('Failed to load local data:', error)
-      throw new Error('Impossible de charger les données locales')
+      throw new Error('Impossible de charger les données locales', { cause: error })
     }
   }
-  
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async save(_data: AppData): Promise<void> {
     // IMPORTANT: En mode local, la persistence est gérée automatiquement

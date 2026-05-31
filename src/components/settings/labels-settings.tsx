@@ -28,7 +28,16 @@ export function LabelsSettings({
   onUpdateSettings,
 }: LabelsSettingsProps) {
   const { t } = useTranslation()
-  const [labelDrafts, setLabelDrafts] = useState<Record<string, string>>({})
+  const [labelDrafts, setLabelDrafts] = useState<Record<string, string>>(
+    Object.fromEntries(settings.labels.map((label) => [label.id, label.name])),
+  )
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLabelDrafts(
+      Object.fromEntries(settings.labels.map((label) => [label.id, label.name])),
+    )
+  }, [settings.labels])
 
   const COLOR_OPTIONS: Array<{ value: TodoLabel['color']; label: string }> = [
     { value: 'slate', label: t('settings.colors.slate') },
@@ -38,12 +47,6 @@ export function LabelsSettings({
     { value: 'rose', label: t('settings.colors.rose') },
     { value: 'violet', label: t('settings.colors.violet') },
   ]
-
-  useEffect(() => {
-    setLabelDrafts(
-      Object.fromEntries(settings.labels.map((label) => [label.id, label.name])),
-    )
-  }, [settings.labels])
 
   const sortedLabels = useMemo(
     () => [...settings.labels].sort((a, b) => a.name.localeCompare(b.name, 'fr-FR')),

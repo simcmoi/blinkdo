@@ -338,15 +338,15 @@ export class CloudStorageProvider implements StorageProvider {
         throw error
       }
       
-      throw new Error('Impossible de charger les données du cloud')
+      throw new Error('Impossible de charger les données du cloud', { cause: error })
     }
   }
-  
+
   async save(data: AppData): Promise<void> {
     if (!this.isAuthenticated()) {
       throw new Error('Vous devez être connecté pour sauvegarder vos données dans le cloud')
     }
-    
+
     if (this.syncStatus === 'offline') {
       throw new Error('Impossible de sauvegarder hors ligne. Vérifiez votre connexion internet.')
     }
@@ -530,10 +530,10 @@ export class CloudStorageProvider implements StorageProvider {
         throw error
       }
       
-      throw new Error('Impossible de sauvegarder les données dans le cloud')
+      throw new Error('Impossible de sauvegarder les données dans le cloud', { cause: error })
     }
   }
-  
+
   async signIn(email: string, password: string): Promise<void> {
     try {
       const { data, error } = await this.client.auth.signInWithPassword({
@@ -550,10 +550,10 @@ export class CloudStorageProvider implements StorageProvider {
         }
       }
     } catch (error) {
-      throw new Error(formatAuthError(error))
+      throw new Error(formatAuthError(error), { cause: error })
     }
   }
-  
+
   async signUp(email: string, password: string): Promise<void> {
     try {
       const { data, error } = await this.client.auth.signUp({
@@ -570,7 +570,7 @@ export class CloudStorageProvider implements StorageProvider {
         }
       }
     } catch (error) {
-      throw new Error(formatAuthError(error))
+      throw new Error(formatAuthError(error), { cause: error })
     }
   }
   

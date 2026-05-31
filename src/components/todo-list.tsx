@@ -478,6 +478,18 @@ export function TodoList({
 
   const activeItems = useMemo(() => buildTodoWithDepth(activeTodos), [activeTodos])
   const completedItems = useMemo(() => buildTodoWithDepth(completedTodos), [completedTodos])
+
+  useEffect(() => {
+    if (!completedExpanded) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCompletedVisibleCount(INITIAL_COMPLETED_VISIBLE_COUNT)
+      return
+    }
+
+    setCompletedVisibleCount((current) =>
+      Math.min(Math.max(current, INITIAL_COMPLETED_VISIBLE_COUNT), completedItems.length || INITIAL_COMPLETED_VISIBLE_COUNT),
+    )
+  }, [completedExpanded, completedItems.length])
   const activeTodoById = useMemo(
     () => new Map(activeTodos.map((todo) => [todo.id, todo])),
     [activeTodos],
@@ -578,16 +590,6 @@ export function TodoList({
     }
   }, [draft.title])
 
-  useEffect(() => {
-    if (!completedExpanded) {
-      setCompletedVisibleCount(INITIAL_COMPLETED_VISIBLE_COUNT)
-      return
-    }
-
-    setCompletedVisibleCount((current) =>
-      Math.min(Math.max(current, INITIAL_COMPLETED_VISIBLE_COUNT), completedItems.length || INITIAL_COMPLETED_VISIBLE_COUNT),
-    )
-  }, [completedExpanded, completedItems.length])
 
   const closeEditor = () => {
     setEditingId(null)

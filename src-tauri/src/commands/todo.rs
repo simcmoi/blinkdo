@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use tauri::{AppHandle, State};
 
 use crate::commands::helpers::{collect_subtree_ids, lock_error, normalize_optional_id, normalize_optional_text, persist_state, push_todo};
-use crate::storage::{now_millis, AppData, AppState, TodoPriority};
+use crate::storage::{now_millis, AppData, AppState, TodoPriority, TodoStatus};
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,11 +67,15 @@ pub fn complete_todo(id: String, app: AppHandle, state: State<'_, AppState>) -> 
 pub fn set_todo_completed(id: String, completed: bool, app: AppHandle, state: State<'_, AppState>) -> Result<AppData, String> {
     log::info!("Setting todo completed: id='{}'", id);
     let next_completed_at = completed.then_some(now_millis());
+    let next_status = if completed { TodoStatus::Done } else { TodoStatus::Todo };
     let affected_ids = {
         let mut guard = state.data.lock().map_err(|_| lock_error("todo"))?;
         let ids = collect_subtree_ids(&guard.todos, &id);
         for todo in guard.todos.iter_mut() {
-            if ids.contains(&todo.id) { todo.completed_at = next_completed_at; }
+            if ids.contains(&todo.id) {
+                todo.completed_at = next_completed_at;
+                todo.status = next_status;
+            }
         }
         ids
     };
@@ -99,6 +103,26 @@ pub fn set_todo_priority(id: String, priority: TodoPriority, app: AppHandle, sta
     let mut guard = state.data.lock().map_err(|_| lock_error("todo"))?;
     if let Some(todo) = guard.todos.iter_mut().find(|todo| todo.id == id) {
         todo.priority = priority;
+    }
+    drop(guard);
+    persist_state(&app, &state)
+}
+
+#[tauri::command]
+pub fn set_todo_status(id: String, status: TodoStatus, app: AppHandle, state: State<'_, AppState>) -> Result<AppData, String> {
+    let mut guard = state.data.lock().map_err(|_| lock_error("todo"))?;
+    if let Some(todo) = guard.todos.iter_mut().find(|todo| todo.id == id) {
+        todo.status = status;
+        match status {
+            TodoStatus::Done => {
+                if todo.completed_at.is_none() {
+                    todo.completed_at = Some(now_millis());
+                }
+            }
+            _ => {
+                todo.completed_at = None;
+            }
+        }
     }
     drop(guard);
     persist_state(&app, &state)

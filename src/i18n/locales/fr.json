@@ -20,6 +20,7 @@
     "markAsCompleted": "Marquer la tâche en cours d'édition comme terminée",
     "removeDate": "Supprimer la date",
     "priority": "Priorité",
+    "status": "Statut",
     "priorityLabel": "Priorité {{priority}}",
     "label": "Étiquette",
     "noLabel": "Aucun label",
@@ -34,6 +35,8 @@
     "markCompleted": "Marquer \"{{title}}\" comme terminée",
     "addToFavorites": "Ajouter {{title}} aux favoris",
     "removeFromFavorites": "Retirer {{title}} des favoris",
+    "addFavorite": "Ajouter aux favoris",
+    "removeFavorite": "Retirer des favoris",
     "actionsFor": "Actions pour {{title}}",
     "reopen": "Rouvrir {{title}}",
     "addDueDate": "Ajouter une date limite",
@@ -45,6 +48,20 @@
     "deleteTask": "Supprimer la tâche",
     "moveTo": "Déplacer vers",
     "showMore": "Afficher plus"
+  },
+  "status": {
+    "todo": "À faire",
+    "inProgress": "En cours",
+    "waiting": "En attente",
+    "done": "Terminé"
+  },
+  "view": {
+    "list": "Vue liste",
+    "kanban": "Vue Kanban"
+  },
+  "kanban": {
+    "emptyColumn": "Rien ici",
+    "dragTask": "Déplacer la tâche"
   },
   "list": {
     "myTasks": "Mes tâches",
@@ -129,6 +146,7 @@
     "logsTooltip": "Fichier journal technique contenant les événements et erreurs de l'application. Utile pour le débogage et le support technique.",
     "openLogFileTooltip": "Ouvre le fichier journal dans votre explorateur de fichiers ou éditeur par défaut.",
     "version": "Version",
+    "availableVersion": "Version disponible",
     "versionTooltip": "Numéro de version actuelle de l'application. Format : majeur.mineur.patch (ex : 0.2.3).",
     "lastCheck": "Dernière vérification",
     "checkForUpdates": "Vérifier les mises à jour",
@@ -185,18 +203,22 @@
     "installingDesc": "L'application va redémarrer dans un instant...",
     "whatsNew": "Nouveautés",
     "install": "Installer",
+    "restart": "Redémarrer",
     "status": {
       "downloading": "Téléchargement de la mise à jour",
       "installing": "Installation de la mise à jour",
+      "downloaded": "Mise à jour prête",
       "restarting": "Redémarrage de l'application",
       "error": "Échec de la mise à jour"
     },
     "downloadingVersion": "Téléchargement de la version {{version}}...",
     "installingVersion": "Installation de la version {{version}}...",
+    "downloadedVersion": "Version {{version}} installée",
     "restartingVersion": "Redémarrage vers la version {{version}}...",
     "errorVersion": "Échec de la mise à jour vers la version {{version}}",
     "downloadingMessage": "Veuillez patienter pendant le téléchargement de la mise à jour. Cela peut prendre quelques instants.",
-    "installingMessage": "La mise à jour est en cours d'installation. L'application va redémarrer automatiquement.",
+    "installingMessage": "La mise à jour est en cours d'installation. L'application restera disponible jusqu'au redémarrage.",
+    "downloadedMessage": "La mise à jour est installée. Redémarrez l'application pour utiliser la nouvelle version.",
     "restartingMessage": "L'application redémarre avec la nouvelle version...",
     "errorMessage": "Une erreur s'est produite lors de la mise à jour de l'application. Veuillez réessayer plus tard ou télécharger la mise à jour manuellement depuis GitHub."
   },

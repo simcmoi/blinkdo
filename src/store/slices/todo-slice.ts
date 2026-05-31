@@ -8,11 +8,12 @@ import {
   setTodoCompleted as setTodoCompletedCommand,
   setTodoLabel as setTodoLabelCommand,
   setTodoPriority as setTodoPriorityCommand,
+  setTodoStatus as setTodoStatusCommand,
   setTodoStarred as setTodoStarredCommand,
   updateTodo as updateTodoCommand,
 } from '@/lib/tauri'
 import { enqueue } from '@/store/operation-queue'
-import type { Todo, TodoPriority } from '@/types/todo'
+import type { Todo, TodoPriority, TodoStatus } from '@/types/todo'
 
 type Set = (state: Record<string, unknown>) => void
 type Get = () => Record<string, unknown>
@@ -44,7 +45,7 @@ export function createTodoSlice(set: Set, get: Get) {
           const p = provider()
           if (!p) throw new Error('Storage provider not initialized')
           const state = get() as { todos: Todo[]; settings: { activeListId: string } }
-          const newTodo: Todo = { id: crypto.randomUUID(), title: trimmedTitle, details: payload.details, reminderAt: payload.reminderAt, parentId: payload.parentId, listId: payload.listId || state.settings.activeListId, createdAt: Date.now(), starred: false, priority: 'none' }
+          const newTodo: Todo = { id: crypto.randomUUID(), title: trimmedTitle, details: payload.details, reminderAt: payload.reminderAt, parentId: payload.parentId, listId: payload.listId || state.settings.activeListId, createdAt: Date.now(), starred: false, priority: 'none', status: 'todo' }
           set({ todos: [...state.todos, newTodo], error: null })
           await p.save({ todos: (get() as { todos: Todo[] }).todos, settings: (get() as { settings: unknown }).settings })
           set({ syncStatus: p.getSyncStatus() })
@@ -81,7 +82,7 @@ export function createTodoSlice(set: Set, get: Get) {
         async () => {
           const p = provider()
           if (!p) throw new Error('Storage provider not initialized')
-          const todos = (get() as { todos: Todo[] }).todos.map((t) => t.id === id ? { ...t, completedAt: completed ? Date.now() : undefined } : t)
+          const todos = (get() as { todos: Todo[] }).todos.map((t) => t.id === id ? { ...t, completedAt: completed ? Date.now() : undefined, status: completed ? 'done' : 'todo' } : t)
           set({ todos, error: null })
           await p.save({ todos: (get() as { todos: Todo[] }).todos, settings: (get() as { settings: unknown }).settings })
           set({ syncStatus: p.getSyncStatus() })
@@ -115,6 +116,29 @@ export function createTodoSlice(set: Set, get: Get) {
           const p = provider()
           if (!p) throw new Error('Storage provider not initialized')
           set({ todos: (get() as { todos: Todo[] }).todos.map((t) => t.id === id ? { ...t, priority } : t), error: null })
+          await p.save({ todos: (get() as { todos: Todo[] }).todos, settings: (get() as { settings: unknown }).settings })
+          set({ syncStatus: p.getSyncStatus() })
+        },
+      )
+    },
+
+    setTodoStatus: async (id: string, status: TodoStatus) => {
+      await handle(
+        async () => {
+          const data = await setTodoStatusCommand(id, status)
+          set({ todos: data.todos, settings: data.settings, error: null })
+        },
+        async () => {
+          const p = provider()
+          if (!p) throw new Error('Storage provider not initialized')
+          set({
+            todos: (get() as { todos: Todo[] }).todos.map((t) => t.id === id ? {
+              ...t,
+              status,
+              completedAt: status === 'done' ? t.completedAt ?? Date.now() : undefined,
+            } : t),
+            error: null,
+          })
           await p.save({ todos: (get() as { todos: Todo[] }).todos, settings: (get() as { settings: unknown }).settings })
           set({ syncStatus: p.getSyncStatus() })
         },

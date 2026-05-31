@@ -97,6 +97,7 @@ pub fn run() {
             commands::set_todo_completed,
             commands::set_todo_starred,
             commands::set_todo_priority,
+            commands::set_todo_status,
             commands::set_todo_label,
             commands::rename_list,
             commands::set_list_icon,
@@ -121,6 +122,7 @@ pub fn run() {
             changelog::get_changelog,
             updater::check_for_update,
             updater::install_update,
+            updater::restart_app,
             accessibility::open_accessibility_settings
         ])
         .run(tauri::generate_context!())

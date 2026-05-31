@@ -13,8 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { PRIORITY_ORDER, priorityLabel } from '@/lib/todo-ui'
-import type { Todo, TodoLabel, TodoListMeta, TodoPriority } from '@/types/todo'
+import { PRIORITY_ORDER, STATUS_ORDER, priorityLabel, statusLabel, todoStatus } from '@/lib/todo-ui'
+import type { Todo, TodoLabel, TodoListMeta, TodoPriority, TodoStatus } from '@/types/todo'
 
 type TodoContextMenuProps = {
   todo: Todo
@@ -22,6 +22,7 @@ type TodoContextMenuProps = {
   labels: TodoLabel[]
   activeListId: string
   onSetPriority: (id: string, priority: TodoPriority) => Promise<void>
+  onSetStatus: (id: string, status: TodoStatus) => Promise<void>
   onSetLabel: (id: string, labelId?: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onMoveToList: (id: string, listId: string) => Promise<void>
@@ -35,6 +36,7 @@ export function TodoContextMenu({
   labels,
   activeListId,
   onSetPriority,
+  onSetStatus,
   onSetLabel,
   onDelete,
   onMoveToList,
@@ -43,6 +45,7 @@ export function TodoContextMenu({
 }: TodoContextMenuProps) {
   const { t } = useTranslation()
   const priority = todo.priority ?? 'none'
+  const status = todoStatus(todo)
 
   return (
     <DropdownMenu>
@@ -58,6 +61,20 @@ export function TodoContextMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>{t('todo.status')}</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-40">
+            {STATUS_ORDER.map((option) => (
+              <DropdownMenuItem
+                key={option}
+                className={cn(option === status ? 'font-medium' : undefined)}
+                onSelect={() => void onSetStatus(todo.id, option)}
+              >
+                {statusLabel(option, t)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>{t('todo.priority')}</DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-40">

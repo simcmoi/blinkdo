@@ -16,6 +16,7 @@
     "markAsCompleted": "Marcar tarea en edición como completada",
     "removeDate": "Eliminar fecha",
     "priority": "Prioridad",
+    "status": "Estado",
     "priorityLabel": "Prioridad {{priority}}",
     "label": "Etiqueta",
     "noLabel": "Sin etiqueta",
@@ -30,6 +31,8 @@
     "markCompleted": "Marcar \"{{title}}\" como completada",
     "addToFavorites": "Añadir {{title}} a favoritos",
     "removeFromFavorites": "Quitar {{title}} de favoritos",
+    "addFavorite": "Añadir a favoritos",
+    "removeFavorite": "Quitar de favoritos",
     "actionsFor": "Acciones para {{title}}",
     "reopen": "Reabrir {{title}}",
     "addDueDate": "Añadir fecha límite",
@@ -37,6 +40,20 @@
     "moveToList": "Mover a lista",
     "completedOn": "Completada {{date}}",
     "completedLabel": "Completada"
+  },
+  "status": {
+    "todo": "Por hacer",
+    "inProgress": "En curso",
+    "waiting": "En espera",
+    "done": "Terminado"
+  },
+  "view": {
+    "list": "Vista lista",
+    "kanban": "Vista Kanban"
+  },
+  "kanban": {
+    "emptyColumn": "Nada aquí",
+    "dragTask": "Mover tarea"
   },
   "list": {
     "myTasks": "Mis tareas",
@@ -125,6 +142,7 @@
     "logsTooltip": "Archivo de registro técnico que contiene los eventos y errores de la aplicación. Útil para depuración y soporte técnico.",
     "openLogFileTooltip": "Abre el archivo de registros en tu explorador de archivos o editor predeterminado.",
     "version": "Versión",
+    "availableVersion": "Versión disponible",
     "versionTooltip": "Número de versión actual de la aplicación. Formato: mayor.menor.parche (ej: 0.2.3).",
     "lastCheck": "Última verificación",
     "checkForUpdates": "Buscar actualizaciones",
@@ -185,7 +203,25 @@
     "installing": "Instalando",
     "installingDesc": "La aplicación se reiniciará en un momento...",
     "whatsNew": "Novedades",
-    "install": "Instalar"
+    "install": "Instalar",
+    "restart": "Reiniciar",
+    "status": {
+      "downloading": "Descargando actualización",
+      "installing": "Instalando actualización",
+      "downloaded": "Actualización lista",
+      "restarting": "Reiniciando aplicación",
+      "error": "Actualización fallida"
+    },
+    "downloadingVersion": "Descargando versión {{version}}...",
+    "installingVersion": "Instalando versión {{version}}...",
+    "downloadedVersion": "Versión {{version}} instalada",
+    "restartingVersion": "Reiniciando a la versión {{version}}...",
+    "errorVersion": "Error al actualizar a la versión {{version}}",
+    "downloadingMessage": "Espera mientras descargamos la actualización. Esto puede tardar unos momentos.",
+    "installingMessage": "La actualización se está instalando. La aplicación seguirá disponible hasta reiniciar.",
+    "downloadedMessage": "La actualización está instalada. Reinicia la aplicación para usar la nueva versión.",
+    "restartingMessage": "La aplicación se está reiniciando con la nueva versión...",
+    "errorMessage": "Se produjo un error al actualizar la aplicación. Inténtalo de nuevo más tarde o descarga la actualización manualmente desde GitHub."
   },
   "sync": {
     "local": "Local",

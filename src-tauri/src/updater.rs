@@ -71,31 +71,38 @@ pub async fn install_update(app: AppHandle) -> Result<(), String> {
             Ok(Some(update)) => {
                 log::info!("Téléchargement de la version {}...", update.version);
 
-                // Émettre des événements de progression
                 if let Err(e) = app.emit("update-progress", "downloading") {
                     log::warn!("Échec de l'émission de l'événement update-progress: {}", e);
                 }
 
+                let progress_app = app.clone();
+                let install_app = app.clone();
+                let mut downloaded_bytes = 0_u64;
+
                 match update
                     .download_and_install(
-                        |chunk_length, content_length| {
+                        move |chunk_length, content_length| {
+                            downloaded_bytes = downloaded_bytes.saturating_add(chunk_length as u64);
                             if let Some(total) = content_length {
-                                let progress = (chunk_length as f64 / total as f64) * 100.0;
-                                log::debug!("Progression du téléchargement : {:.1}% ({}/{})", progress, chunk_length, total);
+                                let progress = if total > 0 {
+                                    ((downloaded_bytes as f64 / total as f64) * 100.0).min(100.0)
+                                } else {
+                                    0.0
+                                };
+                                log::debug!("Progression du téléchargement : {:.1}% ({}/{})", progress, downloaded_bytes, total);
 
-                                // Émettre la progression avec les détails
-                                if let Err(e) = app.emit("update-download-progress", serde_json::json!({
+                                if let Err(e) = progress_app.emit("update-download-progress", serde_json::json!({
                                     "progress": progress,
-                                    "chunkLength": chunk_length,
+                                    "chunkLength": downloaded_bytes,
                                     "contentLength": total
                                 })) {
                                     log::warn!("Échec de l'émission de l'événement update-download-progress: {}", e);
                                 }
                             }
                         },
-                        || {
+                        move || {
                             log::info!("Téléchargement terminé, installation en cours...");
-                            if let Err(e) = app.emit("update-progress", "installing") {
+                            if let Err(e) = install_app.emit("update-progress", "installing") {
                                 log::warn!("Échec de l'émission de l'événement update-progress: {}", e);
                             }
                         },
@@ -103,12 +110,10 @@ pub async fn install_update(app: AppHandle) -> Result<(), String> {
                     .await
                 {
                     Ok(()) => {
-                        log::info!("Mise à jour installée avec succès, redémarrage...");
-                        if let Err(e) = app.emit("update-progress", "restarting") {
+                        log::info!("Mise à jour installée avec succès, redémarrage requis");
+                        if let Err(e) = app.emit("update-progress", "downloaded") {
                             log::warn!("Échec de l'émission de l'événement update-progress: {}", e);
                         }
-                        app.restart();
-                        #[allow(unreachable_code)]
                         Ok(())
                     }
                     Err(error) => {
@@ -144,4 +149,10 @@ pub async fn install_update(app: AppHandle) -> Result<(), String> {
             Err(error_msg)
         }
     }
+}
+
+#[tauri::command]
+pub fn restart_app(app: AppHandle) {
+    log::info!("Redémarrage de l'application demandé après mise à jour");
+    app.restart();
 }

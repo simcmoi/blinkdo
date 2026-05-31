@@ -1,6 +1,6 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import type { AppData, Settings, Todo, TodoPriority } from '@/types/todo'
+import type { AppData, Settings, Todo, TodoPriority, TodoStatus } from '@/types/todo'
 
 const BROWSER_STATE_KEY = 'blinkdo-browser-dev-state'
 
@@ -72,6 +72,7 @@ function handleBrowserInvoke<T>(cmd: string, args?: Record<string, unknown>): T 
         parentId: asString(args?.parentId),
         listId: asString(args?.listId) ?? data.settings.activeListId,
         priority: 'none',
+        status: 'todo',
         createdAt: Date.now(),
         sortIndex: Date.now(),
       }
@@ -100,6 +101,7 @@ function handleBrowserInvoke<T>(cmd: string, args?: Record<string, unknown>): T 
         todos: data.todos.map((todo) => todo.id === id ? {
           ...todo,
           completedAt: completed ? Date.now() : undefined,
+          status: completed ? 'done' : 'todo',
         } : todo),
       }) as T
     }
@@ -118,6 +120,18 @@ function handleBrowserInvoke<T>(cmd: string, args?: Record<string, unknown>): T 
       return writeBrowserData({
         ...data,
         todos: data.todos.map((todo) => todo.id === id ? { ...todo, priority } : todo),
+      }) as T
+    }
+    case 'set_todo_status': {
+      const id = asString(args?.id)
+      const status = args?.status as TodoStatus
+      return writeBrowserData({
+        ...data,
+        todos: data.todos.map((todo) => todo.id === id ? {
+          ...todo,
+          status,
+          completedAt: status === 'done' ? todo.completedAt ?? Date.now() : undefined,
+        } : todo),
       }) as T
     }
     case 'set_todo_label': {
@@ -193,6 +207,7 @@ function handleBrowserInvoke<T>(cmd: string, args?: Record<string, unknown>): T 
       return '' as T
     case 'hide_overlay':
     case 'install_update':
+    case 'restart_app':
     case 'open_data_file':
     case 'open_log_file':
     case 'reset_all_data':
@@ -284,6 +299,13 @@ export async function setTodoPriority(
   return safeInvoke<AppData>('set_todo_priority', { id, priority })
 }
 
+export async function setTodoStatus(
+  id: string,
+  status: TodoStatus,
+): Promise<AppData> {
+  return safeInvoke<AppData>('set_todo_status', { id, status })
+}
+
 export async function setTodoLabel(
   id: string,
   labelId: string | undefined,
@@ -369,6 +391,10 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
 
 export async function installUpdate(): Promise<void> {
   await safeInvoke('install_update')
+}
+
+export async function restartApp(): Promise<void> {
+  await safeInvoke('restart_app')
 }
 
 export async function getAppVersion(): Promise<string> {

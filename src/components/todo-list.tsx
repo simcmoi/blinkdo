@@ -42,16 +42,20 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import {
   priorityLabel,
+  statusClasses,
+  statusLabel,
+  todoStatus,
   labelClasses,
   reminderBadgeClasses,
   getReminderBadgeStyle,
   buildTodoWithDepth,
 } from '@/lib/todo-ui'
-import type { Todo, TodoLabel, TodoListMeta, TodoPriority } from '@/types/todo'
+import type { Todo, TodoLabel, TodoListMeta, TodoPriority, TodoStatus } from '@/types/todo'
 import { useSoundEffects } from '@/hooks/useSoundEffects'
 import { DragOverlayContent } from '@/features/todos/components/DragOverlayContent'
 import { TodoContextMenu } from '@/features/todos/components/TodoContextMenu'
 import { TodoInlineEditor } from '@/features/todos/components/TodoInlineEditor'
+import { ShortcutHint } from '@/components/shortcut-hints'
 
 type TodoListProps = {
   composeInputRef: MutableRefObject<HTMLInputElement | HTMLTextAreaElement | null>
@@ -76,6 +80,7 @@ type TodoListProps = {
   onSetCompleted: (id: string, completed: boolean) => Promise<void>
   onSetStarred: (id: string, starred: boolean) => Promise<void>
   onSetPriority: (id: string, priority: TodoPriority) => Promise<void>
+  onSetStatus: (id: string, status: TodoStatus) => Promise<void>
   onSetLabel: (id: string, labelId?: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onMoveToList: (id: string, listId: string) => Promise<void>
@@ -200,6 +205,7 @@ export function TodoList({
   onSetCompleted,
   onSetStarred,
   onSetPriority,
+  onSetStatus,
   onSetLabel,
   onDelete,
   onMoveToList,
@@ -744,6 +750,7 @@ export function TodoList({
                   >
                     <Plus className="h-4 w-4" />
                     {t('todo.addTask')}
+                    <ShortcutHint shortcut="N" className="ml-auto" />
                   </Button>
                 </li>
               ) : null}
@@ -761,6 +768,7 @@ export function TodoList({
                 <AnimatePresence initial={false}>
                   {activeItems.flatMap(({ todo, depth }) => {
                     const priority = todo.priority ?? 'none'
+                    const status = todoStatus(todo)
                     const label = todo.labelId ? labelById.get(todo.labelId) : undefined
                     const isCompleting = completingIds.has(todo.id)
                     const rows: ReactNode[] = []
@@ -805,19 +813,24 @@ export function TodoList({
                                 />
                               ) : null}
                             </AnimatePresence>
-                            <Checkbox
-                              className={cn(
-                                'relative z-10 mt-0.5 h-5 w-5 rounded-md',
-                                isCompleting && 'border-emerald-600 bg-emerald-600 text-white',
-                              )}
-                              checked={isCompleting || typeof todo.completedAt === 'number'}
-                              onCheckedChange={async (checked) => {
-                                if (checked === true) {
-                                  await markTodoCompleteWithFeedback(todo.id)
-                                }
-                              }}
-                              aria-label={t('todo.markCompleted', { title: todo.title })}
-                            />
+                            <div className="relative z-10 mt-0.5">
+                              <Checkbox
+                                className={cn(
+                                  'h-5 w-5 rounded-md',
+                                  isCompleting && 'border-emerald-600 bg-emerald-600 text-white',
+                                )}
+                                checked={isCompleting || typeof todo.completedAt === 'number'}
+                                onCheckedChange={async (checked) => {
+                                  if (checked === true) {
+                                    await markTodoCompleteWithFeedback(todo.id)
+                                  }
+                                }}
+                                aria-label={t('todo.markCompleted', { title: todo.title })}
+                              />
+                              {effectiveSelectedTodoId === todo.id && editingId === null ? (
+                                <ShortcutHint shortcut="Space" className="absolute -left-1 top-6" />
+                              ) : null}
+                            </div>
 
                           <button
                             type="button"
@@ -831,8 +844,19 @@ export function TodoList({
                               'max-w-full whitespace-normal break-words text-sm font-medium leading-5 text-foreground line-clamp-3 transition-colors',
                               isCompleting && 'text-emerald-800 line-through decoration-emerald-700/70 decoration-2 dark:text-emerald-200',
                             )}>{todo.title}</p>
-                            {(todo.details || todo.reminderAt || priority !== 'none' || label) && (
+                            {(todo.details || todo.reminderAt || priority !== 'none' || status !== 'todo' || label) && (
                               <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                {status !== 'todo' ? (
+                                  <Badge
+                                    variant="ghost"
+                                    className={cn(
+                                      'h-5 px-1.5 py-0 rounded-md',
+                                      statusClasses(status),
+                                    )}
+                                  >
+                                    {statusLabel(status, t)}
+                                  </Badge>
+                                ) : null}
                                 {todo.reminderAt ? (
                                   (() => {
                                     const badgeStyle = getReminderBadgeStyle(todo.reminderAt, t, i18n)
@@ -893,6 +917,7 @@ export function TodoList({
                             labels={labels}
                             activeListId={activeListId}
                             onSetPriority={onSetPriority}
+                            onSetStatus={onSetStatus}
                             onSetLabel={onSetLabel}
                             onDelete={onDelete}
                             onMoveToList={onMoveToList}
@@ -904,7 +929,7 @@ export function TodoList({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 opacity-70 text-muted-foreground transition-opacity hover:text-foreground group-hover:opacity-100"
+                            className="relative h-7 w-7 opacity-70 text-muted-foreground transition-opacity hover:text-foreground group-hover:opacity-100"
                             onClick={async () => {
                               await onSetStarred(todo.id, !todo.starred)
                             }}
@@ -916,6 +941,9 @@ export function TodoList({
                                 todo.starred ? 'fill-foreground text-foreground' : 'text-muted-foreground',
                               )}
                             />
+                            {effectiveSelectedTodoId === todo.id && editingId === null ? (
+                              <ShortcutHint shortcut="F" className="absolute -right-1 top-7" />
+                            ) : null}
                           </Button>
                           <AnimatePresence>
                             {isCompleting ? (

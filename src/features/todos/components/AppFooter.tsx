@@ -1,4 +1,6 @@
 import { ArrowDown, ArrowUp, CornerDownLeft, Keyboard, Square } from 'lucide-react'
+import { Kbd } from '@/components/shortcut-hints'
+import { useShortcutHints } from '@/hooks/use-shortcut-hints'
 
 type AppFooterProps = {
   error: string | null
@@ -7,6 +9,8 @@ type AppFooterProps = {
 }
 
 export function AppFooter({ error, globalShortcut, sortModeLabel }: AppFooterProps) {
+  const { modifierLabel } = useShortcutHints()
+
   if (error) {
     return (
       <div className="flex items-center justify-between gap-2 border-t border-border bg-muted/30 px-4 py-2 text-[11px]">
@@ -21,6 +25,9 @@ export function AppFooter({ error, globalShortcut, sortModeLabel }: AppFooterPro
         <div className="flex min-w-0 items-center gap-1.5">
           <Keyboard className="h-3.5 w-3.5 shrink-0" />
           <span className="mr-1 font-medium">{globalShortcut}</span>
+          <span className="hidden items-center gap-1 text-muted-foreground/80 min-[430px]:inline-flex">
+            maintenir <Kbd>{modifierLabel}</Kbd>
+          </span>
           <span className="inline-flex items-center gap-1 rounded border border-border bg-background px-1.5 py-0.5">
             <ArrowUp className="h-3 w-3" />
             <ArrowDown className="h-3 w-3" />

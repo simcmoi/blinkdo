@@ -20,6 +20,7 @@
     "markAsCompleted": "Mark task being edited as completed",
     "removeDate": "Remove date",
     "priority": "Priority",
+    "status": "Status",
     "priorityLabel": "Priority {{priority}}",
     "label": "Label",
     "noLabel": "No label",
@@ -34,6 +35,8 @@
     "markCompleted": "Mark \"{{title}}\" as completed",
     "addToFavorites": "Add {{title}} to favorites",
     "removeFromFavorites": "Remove {{title}} from favorites",
+    "addFavorite": "Add to favorites",
+    "removeFavorite": "Remove from favorites",
     "actionsFor": "Actions for {{title}}",
     "reopen": "Reopen {{title}}",
     "addDueDate": "Add due date",
@@ -45,6 +48,20 @@
     "deleteTask": "Delete task",
     "moveTo": "Move to",
     "showMore": "Show more"
+  },
+  "status": {
+    "todo": "To do",
+    "inProgress": "In progress",
+    "waiting": "Waiting",
+    "done": "Done"
+  },
+  "view": {
+    "list": "List view",
+    "kanban": "Kanban view"
+  },
+  "kanban": {
+    "emptyColumn": "Nothing here",
+    "dragTask": "Move task"
   },
   "list": {
     "myTasks": "My tasks",
@@ -145,6 +162,7 @@
     "logsTooltip": "Technical log file containing the app's events and errors. Useful for debugging and technical support.",
     "openLogFileTooltip": "Opens the log file in your file explorer or default editor.",
     "version": "Version",
+    "availableVersion": "Available version",
     "versionTooltip": "Current app version number. Format: major.minor.patch (e.g., 0.2.3).",
     "lastCheck": "Last check",
     "checkForUpdates": "Check for updates",
@@ -206,18 +224,22 @@
     "installingDesc": "The app will restart in a moment...",
     "whatsNew": "What's new",
     "install": "Install",
+    "restart": "Restart",
     "status": {
       "downloading": "Downloading Update",
       "installing": "Installing Update",
+      "downloaded": "Update Ready",
       "restarting": "Restarting Application",
       "error": "Update Failed"
     },
     "downloadingVersion": "Downloading version {{version}}...",
     "installingVersion": "Installing version {{version}}...",
+    "downloadedVersion": "Version {{version}} installed",
     "restartingVersion": "Restarting to version {{version}}...",
     "errorVersion": "Failed to update to version {{version}}",
     "downloadingMessage": "Please wait while we download the update. This may take a few moments.",
-    "installingMessage": "The update is being installed. The app will restart automatically.",
+    "installingMessage": "The update is being installed. The app will remain available until restart.",
+    "downloadedMessage": "The update is installed. Restart the app to use the new version.",
     "restartingMessage": "The application is restarting with the new version...",
     "errorMessage": "An error occurred while updating the application. Please try again later or download the update manually from GitHub."
   },

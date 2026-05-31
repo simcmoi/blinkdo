@@ -84,6 +84,16 @@ pub enum TodoPriority {
     Urgent,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum TodoStatus {
+    #[default]
+    Todo,
+    InProgress,
+    Waiting,
+    Done,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TodoList {
@@ -110,6 +120,8 @@ pub struct Todo {
     pub starred: bool,
     #[serde(default)]
     pub priority: TodoPriority,
+    #[serde(default)]
+    pub status: TodoStatus,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

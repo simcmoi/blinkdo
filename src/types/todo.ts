@@ -2,6 +2,7 @@ export type SortOrder = 'asc' | 'desc'
 export type SortMode = 'manual' | 'recent' | 'oldest' | 'title' | 'dueDate'
 export type ThemeMode = 'system' | 'light' | 'dark'
 export type TodoPriority = 'none' | 'low' | 'medium' | 'high' | 'urgent'
+export type TodoStatus = 'todo' | 'inProgress' | 'waiting' | 'done'
 
 export type TodoLabel = {
   id: string
@@ -24,6 +25,7 @@ export type Todo = {
   listId?: string
   starred?: boolean
   priority?: TodoPriority
+  status?: TodoStatus
   labelId?: string
   sortIndex?: number
   createdAt: number

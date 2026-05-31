@@ -16,6 +16,7 @@
     "markAsCompleted": "संपादन कार्य को पूर्ण के रूप में चिह्नित करें",
     "removeDate": "तारीख हटाएं",
     "priority": "प्राथमिकता",
+    "status": "स्थिति",
     "priorityLabel": "प्राथमिकता {{priority}}",
     "label": "लेबल",
     "noLabel": "कोई लेबल नहीं",
@@ -30,6 +31,8 @@
     "markCompleted": "\"{{title}}\" को पूर्ण के रूप में चिह्नित करें",
     "addToFavorites": "{{title}} को पसंदीदा में जोड़ें",
     "removeFromFavorites": "{{title}} को पसंदीदा से हटाएं",
+    "addFavorite": "पसंदीदा में जोड़ें",
+    "removeFavorite": "पसंदीदा से हटाएं",
     "actionsFor": "{{title}} के लिए क्रियाएं",
     "reopen": "{{title}} फिर से खोलें",
     "addDueDate": "समय सीमा जोड़ें",
@@ -37,6 +40,20 @@
     "moveToList": "इसमें स्थानांतरित करें",
     "completedOn": "{{date}} को पूर्ण",
     "completedLabel": "पूर्ण"
+  },
+  "status": {
+    "todo": "करना है",
+    "inProgress": "प्रगति में",
+    "waiting": "प्रतीक्षा में",
+    "done": "पूर्ण"
+  },
+  "view": {
+    "list": "सूची दृश्य",
+    "kanban": "कानबन दृश्य"
+  },
+  "kanban": {
+    "emptyColumn": "यहां कुछ नहीं",
+    "dragTask": "कार्य स्थानांतरित करें"
   },
   "list": {
     "myTasks": "मेरे कार्य",
@@ -124,6 +141,7 @@
     "logsTooltip": "तकनीकी लॉग फ़ाइल जिसमें एप्लिकेशन ईवेंट और त्रुटियां हैं। डिबगिंग और तकनीकी सहायता के लिए उपयोगी।",
     "openLogFileTooltip": "फ़ाइल एक्सप्लोरर या डिफ़ॉल्ट एडिटर में लॉग फ़ाइल खोलें।",
     "version": "संस्करण",
+    "availableVersion": "उपलब्ध संस्करण",
     "versionTooltip": "एप्लिकेशन का वर्तमान संस्करण नंबर। प्रारूप: प्रमुख.लघु.पैच (उदा: 0.2.3)।",
     "lastCheck": "अंतिम जांच",
     "checkForUpdates": "अपडेट के लिए जांचें",
@@ -184,7 +202,25 @@
     "installing": "स्थापित कर रहा है",
     "installingDesc": "एप्लिकेशन जल्द ही पुनरारंभ होगा...",
     "whatsNew": "नया क्या है",
-    "install": "इंस्टॉल करें"
+    "install": "इंस्टॉल करें",
+    "restart": "पुनरारंभ करें",
+    "status": {
+      "downloading": "अपडेट डाउनलोड हो रहा है",
+      "installing": "अपडेट इंस्टॉल हो रहा है",
+      "downloaded": "अपडेट तैयार है",
+      "restarting": "ऐप पुनरारंभ हो रहा है",
+      "error": "अपडेट विफल"
+    },
+    "downloadingVersion": "संस्करण {{version}} डाउनलोड हो रहा है...",
+    "installingVersion": "संस्करण {{version}} इंस्टॉल हो रहा है...",
+    "downloadedVersion": "संस्करण {{version}} इंस्टॉल हो गया",
+    "restartingVersion": "संस्करण {{version}} पर पुनरारंभ हो रहा है...",
+    "errorVersion": "संस्करण {{version}} पर अपडेट विफल",
+    "downloadingMessage": "कृपया प्रतीक्षा करें जब तक हम अपडेट डाउनलोड कर रहे हैं। इसमें कुछ समय लग सकता है।",
+    "installingMessage": "अपडेट इंस्टॉल हो रहा है। पुनरारंभ तक ऐप उपलब्ध रहेगा।",
+    "downloadedMessage": "अपडेट इंस्टॉल हो गया है। नया संस्करण उपयोग करने के लिए ऐप पुनरारंभ करें।",
+    "restartingMessage": "ऐप नए संस्करण के साथ पुनरारंभ हो रहा है...",
+    "errorMessage": "ऐप अपडेट करते समय त्रुटि हुई। कृपया बाद में पुनः प्रयास करें या GitHub से अपडेट मैन्युअल रूप से डाउनलोड करें।"
   },
   "sync": {
     "local": "स्थानीय",

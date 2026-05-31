@@ -1,4 +1,4 @@
-import type { Todo, TodoLabel, TodoPriority } from '@/types/todo'
+import type { Todo, TodoLabel, TodoPriority, TodoStatus } from '@/types/todo'
 
 export type TodoWithDepth = {
   todo: Todo
@@ -6,6 +6,7 @@ export type TodoWithDepth = {
 }
 
 export const PRIORITY_ORDER: TodoPriority[] = ['none', 'low', 'medium', 'high', 'urgent']
+export const STATUS_ORDER: TodoStatus[] = ['todo', 'inProgress', 'waiting', 'done']
 
 export function priorityLabel(priority: TodoPriority, t: (key: string) => string): string {
   switch (priority) {
@@ -24,6 +25,29 @@ export function priorityClasses(priority: TodoPriority): string {
     case 'medium': return 'border border-blue-700/30 bg-blue-500/15 text-blue-700 dark:text-blue-300 dark:border-blue-500/30'
     case 'low': return 'border border-border bg-muted text-muted-foreground'
     default: return 'border border-border bg-transparent text-muted-foreground'
+  }
+}
+
+export function todoStatus(todo: Todo): TodoStatus {
+  if (todo.completedAt) return 'done'
+  return todo.status ?? 'todo'
+}
+
+export function statusLabel(status: TodoStatus, t: (key: string) => string): string {
+  switch (status) {
+    case 'inProgress': return t('status.inProgress')
+    case 'waiting': return t('status.waiting')
+    case 'done': return t('status.done')
+    default: return t('status.todo')
+  }
+}
+
+export function statusClasses(status: TodoStatus): string {
+  switch (status) {
+    case 'inProgress': return 'border border-blue-700/30 bg-blue-500/15 text-blue-700 dark:text-blue-300 dark:border-blue-500/30'
+    case 'waiting': return 'border border-amber-700/30 bg-amber-500/15 text-amber-700 dark:text-amber-300 dark:border-amber-500/30'
+    case 'done': return 'border border-emerald-700/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 dark:border-emerald-500/30'
+    default: return 'border border-border bg-muted text-muted-foreground'
   }
 }
 

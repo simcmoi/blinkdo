@@ -1,7 +1,7 @@
 use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::Path;
 
-use crate::storage::{AppData, Settings, Todo, TodoPriority};
+use crate::storage::{AppData, Settings, Todo, TodoPriority, TodoStatus};
 
 pub fn open(path: &Path) -> SqlResult<Connection> {
     let conn = Connection::open(path)?;
@@ -19,6 +19,7 @@ pub fn migrate(conn: &Connection) -> SqlResult<()> {
             list_id     TEXT,
             starred     INTEGER NOT NULL DEFAULT 0,
             priority    TEXT NOT NULL DEFAULT 'none',
+            status      TEXT NOT NULL DEFAULT 'todo',
             label_id    TEXT,
             sort_index  INTEGER,
             created_at  INTEGER NOT NULL,
@@ -33,6 +34,22 @@ pub fn migrate(conn: &Connection) -> SqlResult<()> {
         CREATE INDEX IF NOT EXISTS idx_todos_parent_id ON todos(parent_id);
         CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed_at);",
     )?;
+    ensure_column(conn, "todos", "status", "TEXT NOT NULL DEFAULT 'todo'")?;
+    Ok(())
+}
+
+fn ensure_column(conn: &Connection, table: &str, column: &str, definition: &str) -> SqlResult<()> {
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
+    let exists = stmt
+        .query_map([], |row| row.get::<_, String>(1))?
+        .collect::<SqlResult<Vec<String>>>()?
+        .iter()
+        .any(|name| name == column);
+
+    if !exists {
+        conn.execute(&format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"), [])?;
+    }
+
     Ok(())
 }
 
@@ -66,7 +83,7 @@ fn load_settings(conn: &Connection) -> SqlResult<Settings> {
 fn load_todos(conn: &Connection) -> SqlResult<Vec<Todo>> {
     let mut stmt = conn.prepare(
         "SELECT id, title, details, parent_id, list_id, starred, priority,
-                label_id, sort_index, created_at, completed_at, reminder_at
+                status, label_id, sort_index, created_at, completed_at, reminder_at
          FROM todos ORDER BY created_at ASC",
     )?;
 
@@ -85,11 +102,19 @@ fn load_todos(conn: &Connection) -> SqlResult<Vec<Todo>> {
                         log::warn!("failed to parse priority '{}': {e}", priority_str);
                         TodoPriority::None
                     }),
-                label_id: row.get(7)?,
-                sort_index: row.get(8)?,
-                created_at: row.get(9)?,
-                completed_at: row.get(10)?,
-                reminder_at: row.get(11)?,
+                status: {
+                    let status_str: String = row.get(7)?;
+                    serde_json::from_str(&format!("\"{}\"", status_str))
+                        .unwrap_or_else(|e| {
+                            log::warn!("failed to parse status '{}': {e}", status_str);
+                            TodoStatus::Todo
+                        })
+                },
+                label_id: row.get(8)?,
+                sort_index: row.get(9)?,
+                created_at: row.get(10)?,
+                completed_at: row.get(11)?,
+                reminder_at: row.get(12)?,
             })
         })?
         .collect::<SqlResult<Vec<Todo>>>()?;
@@ -121,13 +146,17 @@ fn save_todos(conn: &Connection, todos: &[Todo]) -> SqlResult<()> {
 
     let mut stmt = conn.prepare(
         "INSERT INTO todos (id, title, details, parent_id, list_id, starred, priority,
-                           label_id, sort_index, created_at, completed_at, reminder_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                           status, label_id, sort_index, created_at, completed_at, reminder_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
     )?;
 
     for todo in todos {
         let priority_str = serde_json::to_string(&todo.priority)
             .unwrap_or_else(|_| "\"none\"".to_string())
+            .trim_matches('"')
+            .to_string();
+        let status_str = serde_json::to_string(&todo.status)
+            .unwrap_or_else(|_| "\"todo\"".to_string())
             .trim_matches('"')
             .to_string();
 
@@ -139,6 +168,7 @@ fn save_todos(conn: &Connection, todos: &[Todo]) -> SqlResult<()> {
             todo.list_id,
             todo.starred as i64,
             priority_str,
+            status_str,
             todo.label_id,
             todo.sort_index,
             todo.created_at,

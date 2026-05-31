@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { type StorageProvider, type StorageMode, type SyncStatus } from '@/lib/storage'
-import type { Settings, Todo, TodoPriority, ViewMode } from '@/types/todo'
+import type { Settings, Todo, TodoPriority, TodoStatus, ViewMode } from '@/types/todo'
 import { ENABLE_CLOUD_FEATURES } from '@/config/features'
 import { createTodoSlice } from './slices/todo-slice'
 import { createListSlice } from './slices/list-slice'
@@ -31,6 +31,7 @@ export type TodoStore = {
   setTodoCompleted: (id: string, completed: boolean) => Promise<void>
   setTodoStarred: (id: string, starred: boolean) => Promise<void>
   setTodoPriority: (id: string, priority: TodoPriority) => Promise<void>
+  setTodoStatus: (id: string, status: TodoStatus) => Promise<void>
   setTodoLabel: (id: string, labelId?: string) => Promise<void>
   reorderTodos: (payload: { listId: string; parentId?: string; completed: boolean; orderedIds: string[] }) => Promise<void>
   createList: (name: string) => Promise<void>

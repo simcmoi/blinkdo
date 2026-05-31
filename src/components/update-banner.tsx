@@ -9,18 +9,18 @@ import { UpdateDownloadDialog } from '@/components/update-download-dialog'
 import { useTranslation } from 'react-i18next'
 
 export function UpdateBanner() {
-  const { state, updateInfo, installUpdate, dismissUpdate } = useUpdateStore()
+  const { status, updateInfo, downloadAndInstall, dismissUpdate } = useUpdateStore()
   const { t } = useTranslation()
   const [showChangelog, setShowChangelog] = useState(false)
   const [showDownload, setShowDownload] = useState(false)
 
-  if (state !== 'available') {
+  if (status !== 'available') {
     return null
   }
 
   const handleInstall = () => {
     setShowDownload(true)
-    void installUpdate()
+    void downloadAndInstall()
   }
 
   return (

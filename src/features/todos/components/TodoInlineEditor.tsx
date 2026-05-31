@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
+import { ShortcutHint } from '@/components/shortcut-hints'
+import { useShortcutHints } from '@/hooks/use-shortcut-hints'
 import { cn } from '@/lib/utils'
 import { getTodayAtDefaultHour, getTomorrowAtDefaultHour, getReminderBadgeStyle, reminderBadgeClasses } from '@/lib/todo-ui'
 
@@ -69,6 +71,7 @@ export function TodoInlineEditor({
   onSetCompleted,
 }: TodoInlineEditorProps) {
   const { t, i18n } = useTranslation()
+  const { modifierLabel } = useShortcutHints()
 
   const isExistingTodo = targetId !== 'new'
   const leftOffset = Math.min(depth, 6) * 16
@@ -210,6 +213,7 @@ export function TodoInlineEditor({
               <span className="hidden min-[420px]:inline">
                 {commitState === 'saved' ? 'OK' : targetId === 'new' ? t('common.add') : t('common.save')}
               </span>
+              {commitState === 'idle' ? <ShortcutHint shortcut="↵" always className="ml-0.5" /> : null}
             </Button>
           </div>
 
@@ -254,10 +258,11 @@ export function TodoInlineEditor({
                   onShowDetailsChange(true)
                   setTimeout(() => detailsInputRef.current?.focus(), 0)
                 }}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
                   tabIndex={-1}
               >
                 {t('todo.detail')}
+                <ShortcutHint shortcut={`${modifierLabel}D`} />
               </button>
             )}
           </div>
@@ -345,6 +350,7 @@ export function TodoInlineEditor({
                   }}
                 >
                   {t('time.today')}
+                  <ShortcutHint shortcut={`${modifierLabel}1`} />
                 </Button>
                 <span className="text-xs text-muted-foreground">|</span>
                 <Button
@@ -366,6 +372,7 @@ export function TodoInlineEditor({
                   }}
                 >
                   {t('time.tomorrow')}
+                  <ShortcutHint shortcut={`${modifierLabel}2`} />
                 </Button>
                 <span className="text-xs text-muted-foreground">|</span>
                 <Popover

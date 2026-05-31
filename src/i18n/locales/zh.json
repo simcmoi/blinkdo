@@ -16,6 +16,7 @@
     "markAsCompleted": "标记正在编辑的任务为已完成",
     "removeDate": "删除日期",
     "priority": "优先级",
+    "status": "状态",
     "priorityLabel": "优先级 {{priority}}",
     "label": "标签",
     "noLabel": "无标签",
@@ -30,6 +31,8 @@
     "markCompleted": "标记 \"{{title}}\" 为已完成",
     "addToFavorites": "将 {{title}} 添加到收藏",
     "removeFromFavorites": "从收藏中移除 {{title}}",
+    "addFavorite": "加入收藏",
+    "removeFavorite": "移除收藏",
     "actionsFor": "{{title}} 的操作",
     "reopen": "重新打开 {{title}}",
     "addDueDate": "添加截止日期",
@@ -37,6 +40,20 @@
     "moveToList": "移动到",
     "completedOn": "已完成 {{date}}",
     "completedLabel": "已完成"
+  },
+  "status": {
+    "todo": "待办",
+    "inProgress": "进行中",
+    "waiting": "等待中",
+    "done": "已完成"
+  },
+  "view": {
+    "list": "列表视图",
+    "kanban": "看板视图"
+  },
+  "kanban": {
+    "emptyColumn": "暂无内容",
+    "dragTask": "移动任务"
   },
   "list": {
     "myTasks": "我的任务",
@@ -124,6 +141,7 @@
     "logsTooltip": "包含应用事件和错误的技术日志文件。对调试和技术支持很有用。",
     "openLogFileTooltip": "在文件浏览器或默认编辑器中打开日志文件。",
     "version": "版本",
+    "availableVersion": "可用版本",
     "versionTooltip": "应用的当前版本号。格式：主要.次要.补丁（例如：0.2.3）。",
     "lastCheck": "上次检查",
     "checkForUpdates": "检查更新",
@@ -184,7 +202,25 @@
     "installing": "正在安装",
     "installingDesc": "应用将在片刻后重启...",
     "whatsNew": "新功能",
-    "install": "安装"
+    "install": "安装",
+    "restart": "重启",
+    "status": {
+      "downloading": "下载更新",
+      "installing": "安装更新",
+      "downloaded": "更新已就绪",
+      "restarting": "重启应用",
+      "error": "更新失败"
+    },
+    "downloadingVersion": "正在下载版本 {{version}}...",
+    "installingVersion": "正在安装版本 {{version}}...",
+    "downloadedVersion": "版本 {{version}} 已安装",
+    "restartingVersion": "正在重启到版本 {{version}}...",
+    "errorVersion": "更新到版本 {{version}} 失败",
+    "downloadingMessage": "请稍候，正在下载更新。这可能需要一些时间。",
+    "installingMessage": "正在安装更新。应用会保持可用，直到你重启。",
+    "downloadedMessage": "更新已安装。请重启应用以使用新版本。",
+    "restartingMessage": "应用正在使用新版本重启...",
+    "errorMessage": "更新应用时出错。请稍后重试或从 GitHub 手动下载更新。"
   },
   "sync": {
     "local": "本地",

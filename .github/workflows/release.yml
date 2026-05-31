@@ -103,10 +103,10 @@ jobs:
             args: '--target aarch64-apple-darwin'
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
-          # Temporairement désactivé pour les tests (uniquement macOS pour l'instant)
+          - platform: 'windows-latest'
+            args: ''
+          # Linux reste désactivé tant que les bundles Linux ne sont pas distribués.
           # - platform: 'ubuntu-22.04'
-          #   args: ''
-          # - platform: 'windows-latest'
           #   args: ''
 
     runs-on: ${{ matrix.platform }}

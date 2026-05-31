@@ -2,6 +2,10 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder}
 
 const MAIN_WINDOW_LABEL: &str = "main";
 const OVERLAY_WINDOW_LABEL: &str = "overlay";
+const OVERLAY_WIDTH: f64 = 500.0;
+const OVERLAY_TOP_MARGIN: f64 = 44.0;
+const OVERLAY_BOTTOM_MARGIN: f64 = 96.0;
+const OVERLAY_RIGHT_MARGIN: f64 = 16.0;
 
 fn get_main_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     app.get_webview_window(MAIN_WINDOW_LABEL)
@@ -98,15 +102,19 @@ pub fn show_overlay_window(app: &AppHandle) -> tauri::Result<()> {
     overlay.set_always_on_top(true)?;
     overlay.set_skip_taskbar(true)?;
 
-    // Position à droite, 500px, pleine hauteur
+    // Position à droite dans une zone utile, sans couvrir la menu bar ni le Dock.
     if let Ok(Some(monitor)) = overlay.current_monitor() {
         let scale = overlay.scale_factor()?;
         let monitor_size = monitor.size().to_logical::<f64>(scale);
         let monitor_pos = monitor.position().to_logical::<f64>(scale);
-        let width = 500.0;
-        let x = monitor_pos.x + monitor_size.width - width;
-        overlay.set_position(tauri::LogicalPosition { x, y: monitor_pos.y })?;
-        overlay.set_size(tauri::LogicalSize { width, height: monitor_size.height })?;
+        let top_margin = OVERLAY_TOP_MARGIN.min(monitor_size.height / 8.0);
+        let bottom_margin = OVERLAY_BOTTOM_MARGIN.min(monitor_size.height / 5.0);
+        let width = OVERLAY_WIDTH;
+        let height = (monitor_size.height - top_margin - bottom_margin).max(360.0);
+        let x = monitor_pos.x + monitor_size.width - width - OVERLAY_RIGHT_MARGIN;
+        let y = monitor_pos.y + top_margin;
+        overlay.set_position(tauri::LogicalPosition { x, y })?;
+        overlay.set_size(tauri::LogicalSize { width, height })?;
     }
 
     overlay.show()?;

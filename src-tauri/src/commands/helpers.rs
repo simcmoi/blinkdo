@@ -153,6 +153,7 @@ pub fn push_todo(
         list_id: Some(target_list_id),
         starred: false,
         priority: crate::storage::TodoPriority::None,
+        status: crate::storage::TodoStatus::Todo,
         label_id: None,
         sort_index: next_sort_index,
         created_at: now_millis(),

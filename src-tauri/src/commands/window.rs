@@ -3,6 +3,10 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::commands::helpers::lock_error;
 use crate::storage::{AppData, AppState, DB_FILE_NAME};
 
+const OVERLAY_TOP_MARGIN: f64 = 44.0;
+const OVERLAY_BOTTOM_MARGIN: f64 = 96.0;
+const OVERLAY_RIGHT_MARGIN: f64 = 16.0;
+
 #[tauri::command]
 pub fn set_window_width(app: AppHandle, width: f64) -> Result<(), String> {
     if !width.is_finite() {
@@ -28,12 +32,15 @@ pub fn set_window_width(app: AppHandle, width: f64) -> Result<(), String> {
             .ok_or_else(|| "no monitor found".to_string())?;
         let monitor_size = monitor.size().to_logical::<f64>(scale_factor);
         let monitor_position = monitor.position().to_logical::<f64>(scale_factor);
-        let new_x = monitor_position.x + monitor_size.width - width;
-        let new_y = monitor_position.y;
+        let top_margin = OVERLAY_TOP_MARGIN.min(monitor_size.height / 8.0);
+        let bottom_margin = OVERLAY_BOTTOM_MARGIN.min(monitor_size.height / 5.0);
+        let new_x = monitor_position.x + monitor_size.width - width - OVERLAY_RIGHT_MARGIN;
+        let new_y = monitor_position.y + top_margin;
+        let new_height = (monitor_size.height - top_margin - bottom_margin).max(360.0);
 
         window.set_position(tauri::LogicalPosition { x: new_x, y: new_y })
             .map_err(|e| format!("failed to set position: {e}"))?;
-        window.set_size(tauri::LogicalSize { width, height: monitor_size.height })
+        window.set_size(tauri::LogicalSize { width, height: new_height })
             .map_err(|e| format!("failed to set size: {e}"))?;
     } else {
         window.set_size(tauri::LogicalSize { width, height: current_size.height })

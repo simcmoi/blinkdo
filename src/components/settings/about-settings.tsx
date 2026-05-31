@@ -16,7 +16,17 @@ export function AboutSettings() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const [appVersion, setAppVersion] = useState<string>('')
-  const { checkForUpdate, state: updateState, lastChecked } = useUpdateStore()
+  const {
+    checkForUpdate,
+    downloadAndInstall,
+    restart,
+    status: updateStatus,
+    currentVersion,
+    availableVersion,
+    error,
+    progress,
+    lastChecked,
+  } = useUpdateStore()
 
   useEffect(() => {
     void getAppVersion().then(setAppVersion)
@@ -39,8 +49,14 @@ export function AboutSettings() {
               <p>{t('settings.versionTooltip')}</p>
             </TooltipContent>
           </Tooltip>
-          <span className="text-xs font-mono font-medium">{appVersion}</span>
+          <span className="text-xs font-mono font-medium">{currentVersion ?? appVersion}</span>
         </div>
+        {availableVersion ? (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-muted-foreground">{t('settings.availableVersion')}</span>
+            <span className="text-xs font-mono font-medium">{availableVersion}</span>
+          </div>
+        ) : null}
         
         {lastChecked && (
           <div className="flex items-center justify-between gap-3">
@@ -62,15 +78,14 @@ export function AboutSettings() {
               variant="ghost"
               className="h-7 gap-1 px-2 text-xs"
               onClick={async () => {
-                await checkForUpdate()
+                const info = await checkForUpdate()
                 
-                // Show feedback toast based on result
-                if (updateState === 'available') {
+                if (info?.available) {
                   toast({
                     title: t('settings.updateAvailable'),
                     description: t('settings.updateAvailableDesc'),
                   })
-                } else if (updateState === 'error') {
+                } else if (!info) {
                   toast({
                     title: t('common.error'),
                     description: t('settings.updateError'),
@@ -83,16 +98,56 @@ export function AboutSettings() {
                   })
                 }
               }}
-              disabled={updateState === 'checking'}
+              disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'installing'}
             >
-              <RefreshCw className={cn('h-3.5 w-3.5', updateState === 'checking' && 'animate-spin')} />
-              {updateState === 'checking' ? t('settings.checking') : t('settings.checkForUpdates')}
+              <RefreshCw className={cn('h-3.5 w-3.5', updateStatus === 'checking' && 'animate-spin')} />
+              {updateStatus === 'checking' ? t('settings.checking') : t('settings.checkForUpdates')}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="left" className="max-w-xs">
             <p>{t('settings.checkForUpdatesTooltip')}</p>
           </TooltipContent>
         </Tooltip>
+
+        {updateStatus === 'available' ? (
+          <Button
+            type="button"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              void downloadAndInstall()
+            }}
+          >
+            {t('update.install')}
+          </Button>
+        ) : null}
+
+        {updateStatus === 'downloading' || updateStatus === 'installing' ? (
+          <p className="text-xs text-muted-foreground">
+            {updateStatus === 'downloading'
+              ? t('update.downloadingDesc', { version: availableVersion, progress: progress.toFixed(0) })
+              : t('update.installing')}
+          </p>
+        ) : null}
+
+        {updateStatus === 'downloaded' ? (
+          <Button
+            type="button"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              void restart()
+            }}
+          >
+            {t('update.restart')}
+          </Button>
+        ) : null}
+
+        {updateStatus === 'error' && error ? (
+          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+            {error}
+          </p>
+        ) : null}
       </div>
     </div>
   )

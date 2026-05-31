@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, ChevronDown, Circle, Home, Plus, Settings } from 'lucide-react'
+import { CheckCircle2, ChevronDown, Circle, Columns3, Home, List, Plus, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { listen } from '@tauri-apps/api/event'
 import { useTranslation } from 'react-i18next'
 import { SettingsPage } from '@/components/settings-page'
 import { StatisticsPage } from '@/components/statistics-page'
+import { KanbanBoard } from '@/components/kanban-board'
 import { TodoList } from '@/components/todo-list'
 import { UpdateBanner } from '@/components/update-banner'
 import { Onboarding } from '@/components/onboarding/Onboarding'
@@ -40,6 +41,7 @@ export default function App() {
   const [listNameDraft, setListNameDraft] = useState('')
   const [settingsPageOpen, setSettingsPageOpen] = useState(false)
   const [statisticsPageOpen, setStatisticsPageOpen] = useState(false)
+  const [todoViewMode, setTodoViewMode] = useState<'list' | 'kanban'>('list')
 
   const { toast } = useToast()
   const { playAdd, playDelete, playComplete } = useSoundEffects()
@@ -64,6 +66,7 @@ export default function App() {
     setTodoCompleted,
     setTodoLabel,
     setTodoPriority,
+    setTodoStatus,
     setTodoStarred,
     setGlobalShortcut,
     setAutostartEnabled,
@@ -71,7 +74,7 @@ export default function App() {
     updateTodo,
   } = useTodoStore()
 
-  const { checkForUpdate } = useUpdateStore()
+  const { checkForUpdate, ensureListeners } = useUpdateStore()
 
   const {
     activeList,
@@ -79,6 +82,7 @@ export default function App() {
     priorityFilter,
     labelFilterId: effectiveLabelFilterId,
     sortedTodos,
+    visibleTodos,
     activeTodos,
     completedTodos,
     canReorder: canReorderBase,
@@ -195,12 +199,17 @@ export default function App() {
     }
   }, [hydrate, toast, t])
 
-  // Vérifier les mises à jour au démarrage
+  // Vérifier les mises à jour au démarrage sans interrompre l'utilisateur
   useEffect(() => {
-    if (hydrated) {
-      void checkForUpdate()
-    }
-  }, [hydrated, checkForUpdate])
+    if (!hydrated) return
+
+    void ensureListeners()
+    const timeout = window.setTimeout(() => {
+      void checkForUpdate({ silent: true })
+    }, 8000)
+
+    return () => window.clearTimeout(timeout)
+  }, [hydrated, checkForUpdate, ensureListeners])
 
   // Vérifier les mises à jour périodiquement (toutes les 24h)
   useEffect(() => {
@@ -208,7 +217,7 @@ export default function App() {
 
     const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000
     const interval = setInterval(() => {
-      void checkForUpdate()
+      void checkForUpdate({ silent: true })
     }, TWENTY_FOUR_HOURS)
 
     return () => clearInterval(interval)
@@ -317,12 +326,12 @@ export default function App() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <main className="h-screen w-screen bg-transparent p-2 text-foreground">
+      <main className="h-screen w-screen bg-transparent p-2.5 text-foreground">
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.12 }}
-          className="mx-auto flex h-full w-full max-w-[520px] flex-col overflow-hidden rounded-lg border border-border/80 bg-card shadow-2xl"
+          className="mx-auto flex h-full w-full max-w-[520px] flex-col overflow-hidden rounded-xl border border-white/70 bg-card shadow-[0_18px_60px_rgba(15,23,42,0.24),0_0_0_1px_rgba(15,23,42,0.10)] ring-1 ring-black/5 dark:border-white/10 dark:shadow-[0_18px_70px_rgba(0,0,0,0.50),0_0_0_1px_rgba(255,255,255,0.08)] dark:ring-white/10"
         >
         <UpdateBanner />
         {/* Header: current list and global actions */}
@@ -466,7 +475,43 @@ export default function App() {
               }}
             />
           </div>
-          <div className="hidden items-center gap-1.5 sm:flex">
+          <div className="flex items-center gap-1.5">
+            <div className="mr-1 flex rounded-md border border-border/80 bg-background p-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant={todoViewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setTodoViewMode('list')}
+                    aria-label={t('view.list')}
+                  >
+                    <List className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('view.list')}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant={todoViewMode === 'kanban' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setTodoViewMode('kanban')}
+                    aria-label={t('view.kanban')}
+                  >
+                    <Columns3 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('view.kanban')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Badge variant="outline" className="h-6 rounded-md border-border/80 bg-background px-1.5 text-[11px] font-medium text-muted-foreground">
               <Circle className="h-2.5 w-2.5 fill-primary/20 text-primary" />
               {activeTodos.length}
@@ -547,6 +592,25 @@ export default function App() {
                   setStatisticsPageOpen(false)
                 }}
               />
+            ) : todoViewMode === 'kanban' ? (
+              <KanbanBoard
+                todos={visibleTodos}
+                labels={settings.labels}
+                onSetStatus={async (id, status) => {
+                  await setTodoStatus(id, status)
+                  if (status === 'done') {
+                    playComplete()
+                  }
+                }}
+                onSetStarred={async (id, starred) => {
+                  await setTodoStarred(id, starred)
+                }}
+                onDelete={async (id) => {
+                  await deleteTodo(id)
+                  playDelete()
+                }}
+                emptyLabel={t('app.noActiveTasks')}
+              />
             ) : (
               <TodoList
                 composeInputRef={inputRef}
@@ -577,6 +641,12 @@ export default function App() {
                 }}
                 onSetPriority={async (id, priority) => {
                   await setTodoPriority(id, priority)
+                }}
+                onSetStatus={async (id, status) => {
+                  await setTodoStatus(id, status)
+                  if (status === 'done') {
+                    playComplete()
+                  }
                 }}
                 onSetLabel={async (id, labelId) => {
                   await setTodoLabel(id, labelId)

@@ -144,8 +144,8 @@ export default function App() {
       if (!hydrated) return
       
       try {
-        const defaultWidth = isOverlayWindow() ? 700 : 800
-        const settingsWidth = isOverlayWindow() ? 900 : 1200
+        const defaultWidth = isOverlayWindow() ? 500 : 800
+        const settingsWidth = isOverlayWindow() ? 780 : 1200
         await setWindowWidth(settingsPageOpen ? settingsWidth : defaultWidth)
       } catch (error) {
         console.error('Failed to initialize window width:', error)
@@ -319,11 +319,11 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.12 }}
-          className="mx-auto flex h-full w-full max-w-2xl flex-col overflow-hidden bg-card"
+          className="mx-auto flex h-full w-full max-w-[520px] flex-col overflow-hidden border border-border/70 bg-card shadow-xl"
         >
         <UpdateBanner />
-        {/* Header: Logo + Liste + Paramètres - Background distinct */}
-        <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+        {/* Header: current list and global actions */}
+        <div className="flex items-center justify-between gap-2 border-b border-border/70 bg-card px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
             <img src="/app-icon.png" alt="BlinkDo" className="h-4 w-4 rounded-sm" />
             {activeList && renamingListId === activeList.id ? (
@@ -365,7 +365,7 @@ export default function App() {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-7 max-w-[220px] justify-start gap-1.5 px-1 text-sm font-medium"
+                    className="h-7 max-w-[220px] justify-start gap-1.5 px-1 text-sm font-semibold"
                   >
                     {activeList && (() => {
                       const Icon = getIconComponent(activeList.icon)
@@ -477,7 +477,7 @@ export default function App() {
                   try {
                     if (newState) {
                       // Opening settings
-                      const settingsWidth = isOverlayWindow() ? 900 : 1200
+                      const settingsWidth = isOverlayWindow() ? 780 : 1200
                       await setWindowWidth(settingsWidth)
                     } else {
                       // Closing settings
@@ -508,8 +508,7 @@ export default function App() {
         </Tooltip>
         </div>
 
-        {/* Zone principale - Liste des tâches avec background blanc/card */}
-        <div className="min-h-0 flex-1 bg-background px-3 py-2">
+        <div className="min-h-0 flex-1 bg-background px-2 py-2">
           {loading && !hydrated ? (
             <div className="flex h-full items-center justify-center rounded-md border border-border text-sm text-muted-foreground">
               Chargement...

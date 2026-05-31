@@ -15,8 +15,8 @@ fn get_overlay_window(app: &AppHandle) -> Option<WebviewWindow> {
 fn create_overlay_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     let window = WebviewWindowBuilder::new(app, OVERLAY_WINDOW_LABEL, WebviewUrl::default())
         .title("BlinkDo")
-        .inner_size(700.0, 400.0)
-        .min_inner_size(200.0, 200.0)
+        .inner_size(500.0, 620.0)
+        .min_inner_size(360.0, 360.0)
         .resizable(true)
         .maximizable(false)
         .minimizable(false)
@@ -98,12 +98,12 @@ pub fn show_overlay_window(app: &AppHandle) -> tauri::Result<()> {
     overlay.set_always_on_top(true)?;
     overlay.set_skip_taskbar(true)?;
 
-    // Position à droite, 700px, pleine hauteur
+    // Position à droite, 500px, pleine hauteur
     if let Ok(Some(monitor)) = overlay.current_monitor() {
         let scale = overlay.scale_factor()?;
         let monitor_size = monitor.size().to_logical::<f64>(scale);
         let monitor_pos = monitor.position().to_logical::<f64>(scale);
-        let width = 700.0;
+        let width = 500.0;
         let x = monitor_pos.x + monitor_size.width - width;
         overlay.set_position(tauri::LogicalPosition { x, y: monitor_pos.y })?;
         overlay.set_size(tauri::LogicalSize { width, height: monitor_size.height })?;

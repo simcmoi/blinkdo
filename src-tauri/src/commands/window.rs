@@ -44,6 +44,11 @@ pub fn set_window_width(app: AppHandle, width: f64) -> Result<(), String> {
 
 #[tauri::command]
 pub fn hide_overlay(app: AppHandle) -> Result<(), String> {
+    if let Some(overlay) = app.get_webview_window("overlay") {
+        overlay.hide().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
     crate::window::hide_main_window(&app).map_err(|e| e.to_string())
 }
 

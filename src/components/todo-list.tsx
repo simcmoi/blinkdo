@@ -1,6 +1,7 @@
 import {
   type MutableRefObject,
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -219,6 +220,7 @@ export function TodoList({
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
   const [dropPosition, setDropPosition] = useState<'before' | 'after'>('after')
+  const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -230,6 +232,11 @@ export function TodoList({
 
   const activeItems = useMemo(() => buildTodoWithDepth(activeTodos), [activeTodos])
   const completedItems = useMemo(() => buildTodoWithDepth(completedTodos), [completedTodos])
+  const navigableTodoIds = useMemo(() => activeItems.map(({ todo }) => todo.id), [activeItems])
+  const effectiveSelectedTodoId =
+    selectedTodoId && navigableTodoIds.includes(selectedTodoId)
+      ? selectedTodoId
+      : navigableTodoIds[0] ?? null
 
   useEffect(() => {
     if (!completedExpanded) {
@@ -343,7 +350,7 @@ export function TodoList({
   }, [draft.title])
 
 
-  const closeEditor = () => {
+  const closeEditor = useCallback(() => {
     setEditingId(null)
     setNewParentId(null)
     setDraft({ title: '', details: '' })
@@ -351,9 +358,9 @@ export function TodoList({
     setShowDetails(false)
     setShowDate(false)
     setDateMode(null)
-  }
+  }, [])
 
-  const persistAndMaybeClose = async (shouldClose: boolean, reopenAfterCreate = false): Promise<boolean> => {
+  const persistAndMaybeClose = useCallback(async (shouldClose: boolean, reopenAfterCreate = false): Promise<boolean> => {
     if (editingId === null || saveInFlightRef.current) {
       return false
     }
@@ -408,9 +415,9 @@ export function TodoList({
     }
 
     return persistSucceeded
-  }
+  }, [closeEditor, draft, editingId, newParentId, onCreate, onUpdate, playAdd])
 
-  const openCreateEditor = async (parentId?: string) => {
+  const openCreateEditor = useCallback(async (parentId?: string) => {
     if (editingId !== null) {
       const previousSaveSucceeded = await persistAndMaybeClose(true)
       if (!previousSaveSucceeded) {
@@ -425,9 +432,9 @@ export function TodoList({
     setShowDetails(false)
     setShowDate(false)
     setDateMode(null)
-  }
+  }, [editingId, persistAndMaybeClose])
 
-  const openTodoEditor = async (
+  const openTodoEditor = useCallback(async (
     todo: Todo,
     options?: {
       showDate?: boolean
@@ -456,7 +463,91 @@ export function TodoList({
     setShowDetails(options?.showDetails ?? Boolean(todo.details))
     setShowDate(options?.showDate ?? Boolean(todo.reminderAt))
     setDateMode(null)
-  }
+  }, [editingId, persistAndMaybeClose])
+
+  useEffect(() => {
+    if (editingId !== null) return
+
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false
+      const tagName = target.tagName.toLowerCase()
+      return tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.isContentEditable
+    }
+
+    const moveSelection = (direction: 1 | -1) => {
+      if (navigableTodoIds.length === 0) return
+
+      setSelectedTodoId((current) => {
+        const currentId = current && navigableTodoIds.includes(current) ? current : effectiveSelectedTodoId
+        const currentIndex = currentId ? navigableTodoIds.indexOf(currentId) : -1
+        const nextIndex = currentIndex < 0
+          ? direction > 0 ? 0 : navigableTodoIds.length - 1
+          : Math.min(Math.max(currentIndex + direction, 0), navigableTodoIds.length - 1)
+        return navigableTodoIds[nextIndex]
+      })
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || isTypingTarget(event.target)) return
+
+      if (event.key === 'n' || event.key === 'a') {
+        event.preventDefault()
+        void openCreateEditor()
+        return
+      }
+
+      if (event.key === 'ArrowDown' || event.key === 'j') {
+        event.preventDefault()
+        moveSelection(1)
+        return
+      }
+
+      if (event.key === 'ArrowUp' || event.key === 'k') {
+        event.preventDefault()
+        moveSelection(-1)
+        return
+      }
+
+      const selectedTodo = effectiveSelectedTodoId ? activeTodoById.get(effectiveSelectedTodoId) : undefined
+      if (!selectedTodo) return
+
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        void openTodoEditor(selectedTodo)
+        return
+      }
+
+      if (event.key === ' ') {
+        event.preventDefault()
+        void onSetCompleted(selectedTodo.id, true)
+        return
+      }
+
+      if (event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        void onSetStarred(selectedTodo.id, !selectedTodo.starred)
+        return
+      }
+
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault()
+        void onDelete(selectedTodo.id)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [
+    activeTodoById,
+    effectiveSelectedTodoId,
+    editingId,
+    navigableTodoIds,
+    onDelete,
+    onSetCompleted,
+    onSetStarred,
+    openCreateEditor,
+    openTodoEditor,
+  ])
 
   const normalizeDateLabel = (label: string): string => {
     return label.replace(',', '').replace(/\s+/g, ' ').trim()
@@ -606,7 +697,7 @@ export function TodoList({
   const hasMoreCompleted = completedExpanded && completedVisibleCount < completedItems.length
 
   return (
-    <ScrollArea className="h-full rounded-md">
+    <ScrollArea className="h-full">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -620,7 +711,7 @@ export function TodoList({
           strategy={verticalListSortingStrategy}
         >
           <LayoutGroup id="todo-items">
-            <ul className="space-y-2 py-1 pr-2">
+            <ul className="space-y-1 py-1 pr-2">
               {editingId !== 'new' || newParentId !== null ? (
                 <li className="px-2">
                   <Button
@@ -637,11 +728,7 @@ export function TodoList({
                 </li>
               ) : null}
 
-              {editingId === 'new' && newParentId === null ? (
-                <li className="rounded-lg border border-border bg-muted/40 px-2 py-2">
-                  {renderEditorRow('new', 0)}
-                </li>
-              ) : null}
+              {editingId === 'new' && newParentId === null ? renderEditorRow('new', 0) : null}
 
               {activeTodos.length === 0 ? (
                 <li className="px-4 py-4 text-center text-sm text-muted-foreground">{emptyLabel}</li>
@@ -669,10 +756,12 @@ export function TodoList({
                             layout
                             layoutId={`todo-card-${todo.id}`}
                             className={cn(
-                              'flex items-start gap-1.5 rounded-md px-1 py-1 hover:bg-muted/60 transition-colors',
+                              'flex items-start gap-1.5 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/60',
+                              effectiveSelectedTodoId === todo.id && editingId === null ? 'bg-muted ring-1 ring-primary/25' : undefined,
                               priority === 'urgent' ? 'ring-1 ring-destructive/35' : undefined,
                               canReorder && editingId === null ? 'cursor-grab active:cursor-grabbing' : undefined,
                             )}
+                            onMouseEnter={() => setSelectedTodoId(todo.id)}
                           >
                             <Checkbox
                               className="mt-0.5"
@@ -687,12 +776,13 @@ export function TodoList({
 
                           <button
                             type="button"
-                            className="min-w-0 flex-1 text-left overflow-hidden"
+                            className="min-w-0 flex-1 overflow-hidden text-left focus-visible:outline-none"
                             onClick={() => {
+                              setSelectedTodoId(todo.id)
                               void openTodoEditor(todo)
                             }}
                           >
-                            <p className="text-sm text-foreground line-clamp-3 break-all whitespace-normal max-w-[500px]">{todo.title}</p>
+                            <p className="max-w-full whitespace-normal break-words text-sm leading-5 text-foreground line-clamp-3">{todo.title}</p>
                             {(todo.details || todo.reminderAt || priority !== 'none' || label) && (
                               <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                                 {todo.reminderAt ? (
@@ -739,7 +829,7 @@ export function TodoList({
                                 {todo.details ? (
                                   <Badge
                                     variant="outline"
-                                    className="h-5 px-1.5 py-0 rounded-md text-muted-foreground max-w-[200px]"
+                                    className="h-5 max-w-[180px] rounded-md px-1.5 py-0 text-muted-foreground"
                                   >
                                     <FileText className="h-3 w-3 shrink-0" />
                                     <span className="truncate">{todo.details}</span>
@@ -829,7 +919,7 @@ export function TodoList({
                             <motion.div
                               layout
                               layoutId={`todo-card-${todo.id}`}
-                              className="flex items-start gap-1.5 rounded-md px-1 py-1 hover:bg-muted/50 transition-colors"
+                              className="flex items-start gap-1.5 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/50"
                             >
                               <Checkbox
                                 checked
@@ -843,7 +933,7 @@ export function TodoList({
                               />
 
                               <div className="min-w-0 flex-1 overflow-hidden">
-                                <p className="text-sm text-muted-foreground line-through line-clamp-3 break-all whitespace-normal max-w-[500px]">{todo.title}</p>
+                                <p className="max-w-full whitespace-normal break-words text-sm leading-5 text-muted-foreground line-through line-clamp-3">{todo.title}</p>
                                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                                   {todo.completedAt
                                     ? t('todo.completedOn', { date: formatDateLabel(todo.completedAt) })

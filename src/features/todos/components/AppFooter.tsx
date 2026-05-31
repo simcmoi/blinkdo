@@ -1,5 +1,4 @@
-import { open } from '@tauri-apps/plugin-shell'
-import { Star } from 'lucide-react'
+import { Keyboard } from 'lucide-react'
 
 type AppFooterProps = {
   error: string | null
@@ -17,20 +16,15 @@ export function AppFooter({ error, globalShortcut, sortModeLabel }: AppFooterPro
   }
 
   return (
-    <div className="border-t border-border bg-muted/30 px-4 py-2 text-[11px] text-muted-foreground">
+    <div className="border-t border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Keyboard className="h-3.5 w-3.5 shrink-0" />
           <span className="font-medium">{globalShortcut}</span>
           <span className="text-muted-foreground/60">·</span>
-          <span>Tri: {sortModeLabel}</span>
+          <span className="truncate">Enter ajoute/édite · Espace termine · Esc ferme</span>
         </div>
-        <button
-          onClick={() => void open('https://github.com/simcmoi/blinkdo')}
-          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-        >
-          <Star className="h-3 w-3" />
-          <span>Star on GitHub</span>
-        </button>
+        <span className="hidden shrink-0 sm:inline">Tri: {sortModeLabel}</span>
       </div>
     </div>
   )

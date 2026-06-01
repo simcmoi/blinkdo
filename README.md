@@ -15,7 +15,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/simcmoi/blinkdo?style=social)](https://github.com/simcmoi/blinkdo/stargazers)
 
-[🌐 Website](https://simcmoi.github.io/blinkdo) • [📥 Download](https://github.com/simcmoi/blinkdo/releases) • [📖 Docs](docs/README.md) • [🐛 Issues](https://github.com/simcmoi/blinkdo/issues)
+[🌐 Website](https://simcmoi.github.io/blinkdo) • [📥 Download](https://github.com/simcmoi/blinkdo/releases) • [🐛 Issues](https://github.com/simcmoi/blinkdo/issues)
 
 </div>
 
@@ -32,7 +32,7 @@ Built with **Rust** and **React** for native performance and modern UI.
 - 🔒 **100% offline & private** - Local JSON storage, no cloud, no tracking
 - 🪶 **Ultra-lightweight** - ~10MB download, <50MB RAM usage
 - 🚀 **Native performance** - Built with Rust + Tauri (not Electron)
-- 🌍 **Cross-platform** - macOS (Intel + Apple Silicon), Windows, Linux
+- 🌍 **Cross-platform foundation** - macOS and Windows release builds, Linux support in the codebase
 - 🎨 **Modern UI** - Beautiful interface with dark/light mode
 - 🔄 **Auto-updates** - Seamless background updates with code signing
 
@@ -61,9 +61,11 @@ Built with **Rust** and **React** for native performance and modern UI.
 
 - 🍎 **[macOS (.dmg)](https://github.com/simcmoi/blinkdo/releases/latest)** - Universal (Intel + Apple Silicon)
 - 🪟 **[Windows (.msi)](https://github.com/simcmoi/blinkdo/releases/latest)** - Recommended installer
-- 🐧 **[Linux (.AppImage)](https://github.com/simcmoi/blinkdo/releases/latest)** - Universal (all distros)
+- 🐧 **Linux** - Supported by the Tauri codebase, but release bundles are not published yet
 
-Or visit **[Releases](https://github.com/simcmoi/blinkdo/releases)** for all versions (.exe, .deb, older versions).
+Or visit **[Releases](https://github.com/simcmoi/blinkdo/releases)** for all published versions.
+
+> Note: the current `v0.3.0` GitHub Release exists without compiled assets. Create a new tagged release, for example `v0.3.1`, to publish fresh installers.
 
 ### Usage
 
@@ -99,12 +101,17 @@ npm run tauri dev
 # Build for production
 npm run tauri build
 
-# Run tests
-npm test
+# Validate locally
+npm run lint
+npm run build
+npm run test:run
+(cd src-tauri && cargo fmt --check)
+(cd src-tauri && cargo clippy -- -D warnings)
+(cd src-tauri && cargo check)
 
 # Create a release (automated)
-npm run release          # Patch: 0.2.1 → 0.2.2
-npm run release:minor    # Minor: 0.2.1 → 0.3.0
+npm run release          # Patch: 0.3.0 -> 0.3.1
+npm run release:minor    # Minor: 0.3.0 -> 0.4.0
 ```
 
 **Prerequisites:** Node.js 20+ • Rust 1.70+
@@ -113,12 +120,25 @@ For detailed setup instructions, platform-specific dependencies, and contributio
 
 ---
 
+## ✅ CI/CD
+
+The `CI` workflow runs on every push to `main` and validates:
+
+- frontend tests, lint and TypeScript
+- Rust tests on Linux, macOS and Windows
+- `cargo clippy -- -D warnings`
+- `cargo fmt --check`
+- frontend production build
+- Tauri release build check with `cargo build --release`
+
+The `Release` workflow is separate. It runs when a `v*` tag is pushed, builds macOS and Windows installers, then uploads the bundles, signatures and `latest.json` to the GitHub Release. The updater depends on `latest.json`, so a release without assets will not provide updates.
+
+---
+
 ## 📖 Documentation
 
-- 📚 **[Complete Documentation](DOCUMENTATION.md)** - Full guides, setup, and troubleshooting
 - 🤝 **[Contributing Guide](CONTRIBUTING.md)** - How to contribute code or docs
-- 🚀 **[Release Workflow](docs/RELEASE_WORKFLOW.md)** - Automated release process
-- 🔑 **[Code Signing Setup](docs/GENERER_CLES.md)** - Configure auto-updates
+- 🔄 **[Auto-Update Setup](AUTO_UPDATE_SETUP.md)** - Release artifacts, signing and updater setup
 - 📝 **[Changelog](CHANGELOG.md)** - Version history and updates
 
 ---
@@ -137,14 +157,12 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 
 MIT License © 2024 [Simon Fessy](https://github.com/simcmoi)
 
-See [LICENSE](LICENSE) for details.
-
 ---
 
 <div align="center">
 
 ### Made with ❤️ using Rust and React
 
-**[⭐ Star this project](https://github.com/simcmoi/blinkdo)** • **[📥 Download](https://github.com/simcmoi/blinkdo/releases)** • **[📖 Read the docs](DOCUMENTATION.md)**
+**[⭐ Star this project](https://github.com/simcmoi/blinkdo)** • **[📥 Download](https://github.com/simcmoi/blinkdo/releases)** • **[📝 Changelog](CHANGELOG.md)**
 
 </div>

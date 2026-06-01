@@ -3,9 +3,8 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::commands::helpers::lock_error;
 use crate::storage::{AppData, AppState, DB_FILE_NAME};
 
-const OVERLAY_TOP_MARGIN: f64 = 44.0;
-const OVERLAY_BOTTOM_MARGIN: f64 = 96.0;
-const OVERLAY_RIGHT_MARGIN: f64 = 16.0;
+const OVERLAY_SAFE_AREA_PADDING: f64 = 12.0;
+const OVERLAY_RIGHT_MARGIN: f64 = 12.0;
 
 #[tauri::command]
 pub fn set_window_width(app: AppHandle, width: f64) -> Result<(), String> {
@@ -30,13 +29,14 @@ pub fn set_window_width(app: AppHandle, width: f64) -> Result<(), String> {
         let monitor = window.current_monitor()
             .map_err(|e| format!("failed to get monitor: {e}"))?
             .ok_or_else(|| "no monitor found".to_string())?;
-        let monitor_size = monitor.size().to_logical::<f64>(scale_factor);
-        let monitor_position = monitor.position().to_logical::<f64>(scale_factor);
-        let top_margin = OVERLAY_TOP_MARGIN.min(monitor_size.height / 8.0);
-        let bottom_margin = OVERLAY_BOTTOM_MARGIN.min(monitor_size.height / 5.0);
-        let new_x = monitor_position.x + monitor_size.width - width - OVERLAY_RIGHT_MARGIN;
-        let new_y = monitor_position.y + top_margin;
-        let new_height = (monitor_size.height - top_margin - bottom_margin).max(360.0);
+        let work_area = monitor.work_area();
+        let work_area_size = work_area.size.to_logical::<f64>(scale_factor);
+        let work_area_position = work_area.position.to_logical::<f64>(scale_factor);
+        let max_width = work_area_size.width - OVERLAY_RIGHT_MARGIN - OVERLAY_SAFE_AREA_PADDING;
+        let width = width.min(max_width.max(200.0));
+        let new_x = work_area_position.x + work_area_size.width - width - OVERLAY_RIGHT_MARGIN;
+        let new_y = work_area_position.y + OVERLAY_SAFE_AREA_PADDING;
+        let new_height = (work_area_size.height - (OVERLAY_SAFE_AREA_PADDING * 2.0)).max(360.0);
 
         window.set_position(tauri::LogicalPosition { x: new_x, y: new_y })
             .map_err(|e| format!("failed to set position: {e}"))?;

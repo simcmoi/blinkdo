@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, ChevronDown, Circle, Columns3, Home, List, Plus, Settings } from 'lucide-react'
+import { CheckCircle2, ChevronDown, Circle, Columns3, Home, List, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { listen } from '@tauri-apps/api/event'
 import { useTranslation } from 'react-i18next'
@@ -33,6 +33,13 @@ import { useUpdateStore } from '@/store/use-update-store'
 import { useFilteredTodos } from '@/hooks/useFilteredTodos'
 import { setWindowWidth, isOverlayWindow, isTauriRuntime } from '@/lib/tauri'
 import { cn } from '@/lib/utils'
+
+const OVERLAY_LIST_WIDTH = 500
+const OVERLAY_KANBAN_WIDTH = 980
+const OVERLAY_SETTINGS_WIDTH = 780
+const MAIN_LIST_WIDTH = 800
+const MAIN_KANBAN_WIDTH = 1100
+const MAIN_SETTINGS_WIDTH = 1200
 
 export default function App() {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -143,23 +150,38 @@ export default function App() {
     void hydrate()
   }, [hydrate])
 
-  // Initialize window width on mount (only once after hydration)
+  const targetWindowWidth = useMemo(() => {
+    if (settingsPageOpen) {
+      return isOverlayWindow() ? OVERLAY_SETTINGS_WIDTH : MAIN_SETTINGS_WIDTH
+    }
+
+    if (todoViewMode === 'kanban') {
+      return isOverlayWindow() ? OVERLAY_KANBAN_WIDTH : MAIN_KANBAN_WIDTH
+    }
+
+    return isOverlayWindow() ? OVERLAY_LIST_WIDTH : MAIN_LIST_WIDTH
+  }, [settingsPageOpen, todoViewMode])
+
+  const appShellMaxWidth = settingsPageOpen
+    ? 'max-w-[780px]'
+    : todoViewMode === 'kanban'
+      ? 'max-w-[980px]'
+      : 'max-w-[520px]'
+
+  // Keep the desktop shell width aligned with the active view.
   useEffect(() => {
-    const initializeWindowWidth = async () => {
+    const syncWindowWidth = async () => {
       if (!hydrated) return
       
       try {
-        const defaultWidth = isOverlayWindow() ? 500 : 800
-        const settingsWidth = isOverlayWindow() ? 780 : 1200
-        await setWindowWidth(settingsPageOpen ? settingsWidth : defaultWidth)
+        await setWindowWidth(targetWindowWidth)
       } catch (error) {
-        console.error('Failed to initialize window width:', error)
+        console.error('Failed to sync window width:', error)
       }
     }
     
-    void initializeWindowWidth()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated])
+    void syncWindowWidth()
+  }, [hydrated, targetWindowWidth])
 
   // Listen for data-reset event from backend
   useEffect(() => {
@@ -326,12 +348,15 @@ export default function App() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <main className="h-screen w-screen bg-transparent p-2.5 text-foreground">
+      <main className="h-screen w-screen overflow-hidden bg-transparent p-2.5 text-foreground">
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.12 }}
-          className="mx-auto flex h-full w-full max-w-[520px] flex-col overflow-hidden rounded-xl border border-white/70 bg-card shadow-[0_18px_60px_rgba(15,23,42,0.24),0_0_0_1px_rgba(15,23,42,0.10)] ring-1 ring-black/5 dark:border-white/10 dark:shadow-[0_18px_70px_rgba(0,0,0,0.50),0_0_0_1px_rgba(255,255,255,0.08)] dark:ring-white/10"
+          className={cn(
+            'mx-auto flex h-full w-full flex-col overflow-hidden rounded-[18px] border border-white/75 bg-card/95 shadow-[0_18px_56px_rgba(15,23,42,0.22),0_0_0_1px_rgba(15,23,42,0.08)] ring-1 ring-black/5 backdrop-blur-xl dark:border-white/12 dark:bg-card/96 dark:shadow-[0_18px_70px_rgba(0,0,0,0.52),0_0_0_1px_rgba(255,255,255,0.08)] dark:ring-white/10',
+            appShellMaxWidth,
+          )}
         >
         <UpdateBanner />
         {/* Header: current list and global actions */}
@@ -415,6 +440,13 @@ export default function App() {
                     )
                   })}
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      void createList(t('list.newList'))
+                    }}
+                  >
+                    {t('list.addList')}
+                  </DropdownMenuItem>
                   {activeList ? (
                     <DropdownMenuItem
                       onSelect={() => {
@@ -428,25 +460,6 @@ export default function App() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  onClick={async () => {
-                    await createList(t('list.newList'))
-                  }}
-                  aria-label={t('list.addList')}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('list.addList')}</p>
-              </TooltipContent>
-            </Tooltip>
             <ListSettingsMenu
               activeList={activeList}
               sortMode={settings.sortMode}
@@ -512,11 +525,11 @@ export default function App() {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <Badge variant="outline" className="h-6 rounded-md border-border/80 bg-background px-1.5 text-[11px] font-medium text-muted-foreground">
+            <Badge variant="outline" className="hidden h-6 rounded-md border-border/80 bg-background px-1.5 text-[11px] font-medium text-muted-foreground min-[620px]:inline-flex">
               <Circle className="h-2.5 w-2.5 fill-primary/20 text-primary" />
               {activeTodos.length}
             </Badge>
-            <Badge variant="outline" className="h-6 rounded-md border-border/80 bg-background px-1.5 text-[11px] font-medium text-muted-foreground">
+            <Badge variant="outline" className="hidden h-6 rounded-md border-border/80 bg-background px-1.5 text-[11px] font-medium text-muted-foreground min-[620px]:inline-flex">
               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
               {completedTodos.length}
             </Badge>
@@ -530,18 +543,13 @@ export default function App() {
                 onClick={async () => {
                   const newState = !settingsPageOpen
                   setSettingsPageOpen(newState)
-                  // Resize window based on context
-                  // Settings: 900px (overlay) or 1200px (main), Main view: 500px (overlay) or 800px (main)
                   try {
-                    if (newState) {
-                      // Opening settings
-                      const settingsWidth = isOverlayWindow() ? 780 : 1200
-                      await setWindowWidth(settingsWidth)
-                    } else {
-                      // Closing settings
-                      const defaultWidth = isOverlayWindow() ? 500 : 800
-                      await setWindowWidth(defaultWidth)
-                    }
+                    const nextWidth = newState
+                      ? isOverlayWindow() ? OVERLAY_SETTINGS_WIDTH : MAIN_SETTINGS_WIDTH
+                      : todoViewMode === 'kanban'
+                        ? isOverlayWindow() ? OVERLAY_KANBAN_WIDTH : MAIN_KANBAN_WIDTH
+                        : isOverlayWindow() ? OVERLAY_LIST_WIDTH : MAIN_LIST_WIDTH
+                    await setWindowWidth(nextWidth)
                   } catch (error) {
                     console.error('Failed to resize window:', error)
                     toast({

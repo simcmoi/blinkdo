@@ -113,13 +113,13 @@ export function TodoInlineEditor({
   return (
     <li
       key={targetId === 'new' ? 'new-editor' : `editor-${targetId}`}
-      className="py-1"
+      className="px-2 py-1"
       style={leftOffset > 0 ? { paddingLeft: `${leftOffset + 8}px` } : undefined}
-      >
+    >
         <div
           ref={editorContainerRef}
           className={cn(
-            'flex items-start gap-2 rounded-md border border-primary/35 bg-card px-2.5 py-2 shadow-md shadow-primary/5 transition-all focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15',
+            'relative flex items-start gap-2 overflow-hidden rounded-md border border-primary/35 bg-card px-2 py-1.5 shadow-sm shadow-primary/5 transition-colors focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15',
             commitState === 'saved' && 'border-emerald-500/50 ring-2 ring-emerald-500/15',
           )}
           onPointerDownCapture={() => { lastPointerInsideEditorAtRef.current = window.performance.now() }}
@@ -127,7 +127,7 @@ export function TodoInlineEditor({
         >
           {isExistingTodo ? (
             <Checkbox
-              className="mt-2"
+              className="mt-1.5 h-5 w-5 rounded-md"
               checked={false}
               onCheckedChange={async () => { await onSetCompleted(targetId, true); onClose() }}
               aria-label={t('todo.markAsCompleted')}
@@ -137,7 +137,7 @@ export function TodoInlineEditor({
               <Plus className="h-3.5 w-3.5" />
             </div>
           )}
-          <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="min-w-0 flex-1 space-y-1">
           <div className="flex min-w-0 items-start gap-1.5">
             <Textarea
               ref={(node) => {
@@ -193,13 +193,13 @@ export function TodoInlineEditor({
               placeholder={t('todo.taskTitle')}
               maxLength={1000}
               rows={1}
-              className="min-h-9 max-h-[112px] flex-1 resize-none overflow-y-auto rounded-md border-0 bg-muted/45 px-2.5 py-1.5 text-[15px] font-medium leading-6 text-foreground shadow-none placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-primary/30"
+              className="min-h-8 max-h-[112px] flex-1 resize-none overflow-y-auto rounded-md border-0 bg-muted/45 px-2 py-1 text-sm font-medium leading-6 text-foreground shadow-none placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-primary/30"
             />
             <Button
               type="button"
               size="sm"
               disabled={!canCommit}
-              className="h-9 shrink-0 gap-1.5 px-2.5"
+              className="h-8 shrink-0 gap-1.5 px-2.5"
               onClick={() => void commitDraft(true)}
               aria-label={targetId === 'new' ? t('todo.addTask') : t('common.save')}
             >
@@ -217,7 +217,7 @@ export function TodoInlineEditor({
             </Button>
           </div>
 
-            <div className="flex items-center gap-1.5 px-2.5">
+            <div className="flex min-h-6 items-center gap-1.5 px-2">
             {!showDetails && draft.details.trim().length === 0 && (
               <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             )}
@@ -267,7 +267,7 @@ export function TodoInlineEditor({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-h-6 items-center gap-1.5">
             {draft.reminderAt ? (
               <div className="inline-flex items-center gap-1">
                 <Popover

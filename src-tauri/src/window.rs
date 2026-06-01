@@ -3,9 +3,10 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder}
 const MAIN_WINDOW_LABEL: &str = "main";
 const OVERLAY_WINDOW_LABEL: &str = "overlay";
 const OVERLAY_WIDTH: f64 = 500.0;
-const OVERLAY_TOP_MARGIN: f64 = 44.0;
-const OVERLAY_BOTTOM_MARGIN: f64 = 96.0;
-const OVERLAY_RIGHT_MARGIN: f64 = 16.0;
+const OVERLAY_MIN_WIDTH: f64 = 360.0;
+const OVERLAY_MAX_WIDTH: f64 = 1180.0;
+const OVERLAY_SAFE_AREA_PADDING: f64 = 12.0;
+const OVERLAY_RIGHT_MARGIN: f64 = 12.0;
 
 fn get_main_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     app.get_webview_window(MAIN_WINDOW_LABEL)
@@ -75,8 +76,12 @@ pub fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
 }
 
 pub fn show_overlay_window(app: &AppHandle) -> tauri::Result<()> {
+    let mut was_existing_overlay = false;
     let overlay = match get_overlay_window(app) {
-        Some(win) => win,
+        Some(win) => {
+            was_existing_overlay = true;
+            win
+        },
         None => create_overlay_window(app)?,
     };
 
@@ -102,17 +107,30 @@ pub fn show_overlay_window(app: &AppHandle) -> tauri::Result<()> {
     overlay.set_always_on_top(true)?;
     overlay.set_skip_taskbar(true)?;
 
-    // Position à droite dans une zone utile, sans couvrir la menu bar ni le Dock.
+    // Keep the overlay inside the OS work area, so it does not cover the menu bar,
+    // Dock, or Windows taskbar.
     if let Ok(Some(monitor)) = overlay.current_monitor() {
         let scale = overlay.scale_factor()?;
-        let monitor_size = monitor.size().to_logical::<f64>(scale);
-        let monitor_pos = monitor.position().to_logical::<f64>(scale);
-        let top_margin = OVERLAY_TOP_MARGIN.min(monitor_size.height / 8.0);
-        let bottom_margin = OVERLAY_BOTTOM_MARGIN.min(monitor_size.height / 5.0);
-        let width = OVERLAY_WIDTH;
-        let height = (monitor_size.height - top_margin - bottom_margin).max(360.0);
-        let x = monitor_pos.x + monitor_size.width - width - OVERLAY_RIGHT_MARGIN;
-        let y = monitor_pos.y + top_margin;
+        let work_area = monitor.work_area();
+        let work_area_size = work_area.size.to_logical::<f64>(scale);
+        let work_area_pos = work_area.position.to_logical::<f64>(scale);
+        let current_width = if was_existing_overlay {
+            overlay
+                .inner_size()
+                .ok()
+                .map(|size| size.to_logical::<f64>(scale).width)
+                .unwrap_or(OVERLAY_WIDTH)
+        } else {
+            OVERLAY_WIDTH
+        };
+        let max_width =
+            (work_area_size.width - OVERLAY_RIGHT_MARGIN - OVERLAY_SAFE_AREA_PADDING)
+                .min(OVERLAY_MAX_WIDTH)
+                .max(OVERLAY_MIN_WIDTH);
+        let width = current_width.clamp(OVERLAY_MIN_WIDTH, max_width);
+        let height = (work_area_size.height - (OVERLAY_SAFE_AREA_PADDING * 2.0)).max(360.0);
+        let x = work_area_pos.x + work_area_size.width - width - OVERLAY_RIGHT_MARGIN;
+        let y = work_area_pos.y + OVERLAY_SAFE_AREA_PADDING;
         overlay.set_position(tauri::LogicalPosition { x, y })?;
         overlay.set_size(tauri::LogicalSize { width, height })?;
     }

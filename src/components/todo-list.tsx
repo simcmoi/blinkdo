@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react'
 import { AlertTriangle, CalendarClock, Check, CheckCircle2, ChevronDown, ChevronRight, Ellipsis, FileText, Plus, Sparkles, Star, Tags } from 'lucide-react'
-import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
   DndContext,
@@ -174,11 +174,8 @@ function SortableTodoItem({
         ...style,
         ...(leftOffset > 0 ? { paddingLeft: `${leftOffset + 8}px` } : undefined),
       }}
-      layout
-      initial={{ opacity: 0, y: 6, scale: 0.985 }}
-      animate={{ opacity: isCurrentlyDragging ? 0.4 : 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, x: -12, scale: 0.96 }}
-      transition={{ type: 'spring', stiffness: 580, damping: 38, mass: 0.5 }}
+      animate={{ opacity: isCurrentlyDragging ? 0.4 : 1 }}
+      transition={{ duration: 0.08 }}
       className={cn(
         'px-2 py-1 relative',
         isCurrentlyOver && !isCurrentlyDragging && indicatorClass
@@ -189,6 +186,221 @@ function SortableTodoItem({
     >
       {children}
     </motion.li>
+  )
+}
+
+type TaskMetaBadgesProps = {
+  todo: Todo
+  priority: TodoPriority
+  status: TodoStatus
+  label?: TodoLabel
+}
+
+function TaskMetaBadges({ todo, priority, status, label }: TaskMetaBadgesProps) {
+  const { t, i18n } = useTranslation()
+
+  if (!todo.details && !todo.reminderAt && priority === 'none' && status === 'todo' && !label) {
+    return null
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+      {status !== 'todo' ? (
+        <Badge
+          variant="ghost"
+          className={cn('h-5 rounded-md px-1.5 py-0', statusClasses(status))}
+        >
+          {statusLabel(status, t)}
+        </Badge>
+      ) : null}
+      {todo.reminderAt ? (
+        (() => {
+          const badgeStyle = getReminderBadgeStyle(todo.reminderAt, t, i18n)
+          return (
+            <Badge
+              variant="ghost"
+              className={cn('h-5 rounded-md px-1.5 py-0', reminderBadgeClasses(badgeStyle.variant))}
+            >
+              <CalendarClock className="h-3 w-3" />
+              {badgeStyle.label}
+            </Badge>
+          )
+        })()
+      ) : null}
+      {priority !== 'none' ? (
+        <Badge
+          variant="ghost"
+          className={cn('h-5 rounded-md px-1.5 py-0', priorityClasses(priority))}
+        >
+          {priority === 'urgent' ? <AlertTriangle className="h-3 w-3" /> : null}
+          {priorityLabel(priority, t)}
+        </Badge>
+      ) : null}
+      {label ? (
+        <Badge
+          variant="ghost"
+          className={cn('h-5 rounded-md px-1.5 py-0', labelClasses(label.color))}
+        >
+          <Tags className="h-3 w-3" />
+          {label.name}
+        </Badge>
+      ) : null}
+      {todo.details ? (
+        <Badge
+          variant="outline"
+          className="h-5 max-w-[180px] rounded-md px-1.5 py-0 text-muted-foreground"
+        >
+          <FileText className="h-3 w-3 shrink-0" />
+          <span className="truncate">{todo.details}</span>
+        </Badge>
+      ) : null}
+    </div>
+  )
+}
+
+type TaskRowProps = {
+  todo: Todo
+  priority: TodoPriority
+  status: TodoStatus
+  label?: TodoLabel
+  lists: TodoListMeta[]
+  labels: TodoLabel[]
+  activeListId: string
+  isSelected: boolean
+  isCompleting: boolean
+  canReorder: boolean
+  onHover: () => void
+  onOpen: () => void
+  onComplete: () => Promise<void>
+  onSetStarred: (id: string, starred: boolean) => Promise<void>
+  onSetPriority: (id: string, priority: TodoPriority) => Promise<void>
+  onSetStatus: (id: string, status: TodoStatus) => Promise<void>
+  onSetLabel: (id: string, labelId?: string) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+  onMoveToList: (id: string, listId: string) => Promise<void>
+  onOpenDateEditor: () => void
+  onOpenSubtaskEditor: () => void
+}
+
+function TaskRow({
+  todo,
+  priority,
+  status,
+  label,
+  lists,
+  labels,
+  activeListId,
+  isSelected,
+  isCompleting,
+  canReorder,
+  onHover,
+  onOpen,
+  onComplete,
+  onSetStarred,
+  onSetPriority,
+  onSetStatus,
+  onSetLabel,
+  onDelete,
+  onMoveToList,
+  onOpenDateEditor,
+  onOpenSubtaskEditor,
+}: TaskRowProps) {
+  const { t } = useTranslation()
+
+  return (
+    <div
+      className={cn(
+        'group relative flex items-start gap-2 overflow-hidden rounded-md border border-transparent px-2 py-1.5 transition-colors hover:border-border/80 hover:bg-card',
+        'before:absolute before:bottom-1.5 before:left-0 before:top-1.5 before:w-0.5 before:rounded-full before:bg-transparent',
+        isSelected ? 'border-border bg-card shadow-sm before:bg-primary' : undefined,
+        priority === 'urgent' ? 'border-destructive/30 bg-destructive/5 before:bg-destructive' : undefined,
+        isCompleting ? 'border-emerald-500/35 bg-emerald-500/10 shadow-sm before:bg-emerald-500' : undefined,
+        canReorder ? 'cursor-grab active:cursor-grabbing' : undefined,
+      )}
+      onMouseEnter={onHover}
+    >
+      <AnimatePresence>
+        {isCompleting ? (
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-emerald-500/5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+          />
+        ) : null}
+      </AnimatePresence>
+      <div className="relative z-10 mt-0.5">
+        <Checkbox
+          className={cn('h-5 w-5 rounded-md', isCompleting && 'border-emerald-600 bg-emerald-600 text-white')}
+          checked={isCompleting || typeof todo.completedAt === 'number'}
+          onCheckedChange={async (checked) => {
+            if (checked === true) await onComplete()
+          }}
+          aria-label={t('todo.markCompleted', { title: todo.title })}
+        />
+        {isSelected ? <ShortcutHint shortcut="Space" className="absolute -left-1 top-6" /> : null}
+      </div>
+
+      <button
+        type="button"
+        className="relative z-10 min-w-0 flex-1 overflow-hidden text-left focus-visible:outline-none"
+        onClick={onOpen}
+      >
+        <p
+          className={cn(
+            'max-w-full whitespace-normal break-words text-sm font-medium leading-5 text-foreground line-clamp-3 transition-colors',
+            isCompleting && 'text-emerald-800 line-through decoration-emerald-700/70 decoration-2 dark:text-emerald-200',
+          )}
+        >
+          {todo.title}
+        </p>
+        <TaskMetaBadges todo={todo} priority={priority} status={status} label={label} />
+      </button>
+
+      <TodoContextMenu
+        todo={todo}
+        lists={lists}
+        labels={labels}
+        activeListId={activeListId}
+        onSetPriority={onSetPriority}
+        onSetStatus={onSetStatus}
+        onSetLabel={onSetLabel}
+        onDelete={onDelete}
+        onMoveToList={onMoveToList}
+        onOpenDateEditor={onOpenDateEditor}
+        onOpenSubtaskEditor={onOpenSubtaskEditor}
+      />
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="relative h-7 w-7 text-muted-foreground opacity-70 transition-opacity hover:text-foreground group-hover:opacity-100"
+        onClick={async () => {
+          await onSetStarred(todo.id, !todo.starred)
+        }}
+        aria-label={todo.starred ? t('todo.removeFromFavorites', { title: todo.title }) : t('todo.addToFavorites', { title: todo.title })}
+      >
+        <Star className={cn('h-3.5 w-3.5', todo.starred ? 'fill-foreground text-foreground' : 'text-muted-foreground')} />
+        {isSelected ? <ShortcutHint shortcut="F" className="absolute -right-1 top-7" /> : null}
+      </Button>
+      <AnimatePresence>
+        {isCompleting ? (
+          <motion.div
+            className="relative z-10 ml-1 flex h-7 shrink-0 items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/15 px-2 text-xs font-medium text-emerald-700 dark:text-emerald-200"
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 8 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 32 }}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            {t('common.done')}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
   )
 }
 
@@ -736,7 +948,6 @@ export function TodoList({
           items={activeItems.map(item => item.todo.id)}
           strategy={verticalListSortingStrategy}
         >
-          <LayoutGroup id="todo-items">
             <ul className="space-y-1 py-1 pr-2">
               {editingId !== 'new' || newParentId !== null ? (
                 <li className="px-2">
@@ -765,7 +976,7 @@ export function TodoList({
                   <p className="mt-3 text-sm font-medium text-foreground">{emptyLabel}</p>
                 </li>
               ) : (
-                <AnimatePresence initial={false}>
+                <>
                   {activeItems.flatMap(({ todo, depth }) => {
                     const priority = todo.priority ?? 'none'
                     const status = todoStatus(todo)
@@ -786,136 +997,24 @@ export function TodoList({
                           isOver={overId === todo.id}
                           dropPosition={dropPosition}
                         >
-                          <motion.div
-                            layout
-                            layoutId={`todo-card-${todo.id}`}
-                            className={cn(
-                              'group relative flex items-start gap-2 overflow-hidden rounded-md border border-transparent px-2 py-1.5 transition-colors hover:border-border/80 hover:bg-card',
-                              'before:absolute before:bottom-1.5 before:left-0 before:top-1.5 before:w-0.5 before:rounded-full before:bg-transparent',
-                              effectiveSelectedTodoId === todo.id && editingId === null ? 'border-border bg-card shadow-sm before:bg-primary' : undefined,
-                              priority === 'urgent' ? 'border-destructive/30 bg-destructive/5 before:bg-destructive' : undefined,
-                              isCompleting ? 'border-emerald-500/35 bg-emerald-500/10 shadow-sm before:bg-emerald-500' : undefined,
-                              canReorder && editingId === null ? 'cursor-grab active:cursor-grabbing' : undefined,
-                            )}
-                            animate={isCompleting ? { scale: 0.992 } : { scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 520, damping: 32, mass: 0.5 }}
-                            onMouseEnter={() => setSelectedTodoId(todo.id)}
-                          >
-                            <AnimatePresence>
-                              {isCompleting ? (
-                                <motion.div
-                                  aria-hidden
-                                  className="pointer-events-none absolute inset-0 bg-emerald-500/5"
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  exit={{ opacity: 0 }}
-                                  transition={{ duration: 0.12 }}
-                                />
-                              ) : null}
-                            </AnimatePresence>
-                            <div className="relative z-10 mt-0.5">
-                              <Checkbox
-                                className={cn(
-                                  'h-5 w-5 rounded-md',
-                                  isCompleting && 'border-emerald-600 bg-emerald-600 text-white',
-                                )}
-                                checked={isCompleting || typeof todo.completedAt === 'number'}
-                                onCheckedChange={async (checked) => {
-                                  if (checked === true) {
-                                    await markTodoCompleteWithFeedback(todo.id)
-                                  }
-                                }}
-                                aria-label={t('todo.markCompleted', { title: todo.title })}
-                              />
-                              {effectiveSelectedTodoId === todo.id && editingId === null ? (
-                                <ShortcutHint shortcut="Space" className="absolute -left-1 top-6" />
-                              ) : null}
-                            </div>
-
-                          <button
-                            type="button"
-                            className="relative z-10 min-w-0 flex-1 overflow-hidden text-left focus-visible:outline-none"
-                            onClick={() => {
-                              setSelectedTodoId(todo.id)
-                              void openTodoEditor(todo)
-                            }}
-                          >
-                            <p className={cn(
-                              'max-w-full whitespace-normal break-words text-sm font-medium leading-5 text-foreground line-clamp-3 transition-colors',
-                              isCompleting && 'text-emerald-800 line-through decoration-emerald-700/70 decoration-2 dark:text-emerald-200',
-                            )}>{todo.title}</p>
-                            {(todo.details || todo.reminderAt || priority !== 'none' || status !== 'todo' || label) && (
-                              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                                {status !== 'todo' ? (
-                                  <Badge
-                                    variant="ghost"
-                                    className={cn(
-                                      'h-5 px-1.5 py-0 rounded-md',
-                                      statusClasses(status),
-                                    )}
-                                  >
-                                    {statusLabel(status, t)}
-                                  </Badge>
-                                ) : null}
-                                {todo.reminderAt ? (
-                                  (() => {
-                                    const badgeStyle = getReminderBadgeStyle(todo.reminderAt, t, i18n)
-                                    return (
-                                      <Badge
-                                        variant="ghost"
-                                        className={cn(
-                                          "h-5 px-1.5 py-0 rounded-md",
-                                          reminderBadgeClasses(badgeStyle.variant),
-                                        )}
-                                      >
-                                        <CalendarClock className="h-3 w-3" />
-                                        {badgeStyle.label}
-                                      </Badge>
-                                    )
-                                  })()
-                                ) : null}
-                                {priority !== 'none' ? (
-                                  <Badge
-                                    variant="ghost"
-                                    className={cn(
-                                      'h-5 px-1.5 py-0 rounded-md',
-                                      priorityClasses(priority),
-                                    )}
-                                  >
-                                    {priority === 'urgent' ? <AlertTriangle className="h-3 w-3" /> : null}
-                                    {priorityLabel(priority, t)}
-                                  </Badge>
-                                ) : null}
-                                {label ? (
-                                  <Badge
-                                    variant="ghost"
-                                    className={cn(
-                                      'h-5 px-1.5 py-0 rounded-md',
-                                      labelClasses(label.color),
-                                    )}
-                                  >
-                                    <Tags className="h-3 w-3" />
-                                    {label.name}
-                                  </Badge>
-                                ) : null}
-                                {todo.details ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="h-5 max-w-[180px] rounded-md px-1.5 py-0 text-muted-foreground"
-                                  >
-                                    <FileText className="h-3 w-3 shrink-0" />
-                                    <span className="truncate">{todo.details}</span>
-                                  </Badge>
-                                ) : null}
-                              </div>
-                            )}
-                          </button>
-
-                          <TodoContextMenu
+                          <TaskRow
                             todo={todo}
+                            priority={priority}
+                            status={status}
+                            label={label}
                             lists={lists}
                             labels={labels}
                             activeListId={activeListId}
+                            isSelected={effectiveSelectedTodoId === todo.id && editingId === null}
+                            isCompleting={isCompleting}
+                            canReorder={canReorder && editingId === null}
+                            onHover={() => setSelectedTodoId(todo.id)}
+                            onOpen={() => {
+                              setSelectedTodoId(todo.id)
+                              void openTodoEditor(todo)
+                            }}
+                            onComplete={() => markTodoCompleteWithFeedback(todo.id)}
+                            onSetStarred={onSetStarred}
                             onSetPriority={onSetPriority}
                             onSetStatus={onSetStatus}
                             onSetLabel={onSetLabel}
@@ -924,42 +1023,6 @@ export function TodoList({
                             onOpenDateEditor={() => void openTodoEditor(todo, { showDate: true })}
                             onOpenSubtaskEditor={() => void openCreateEditor(todo.id)}
                           />
-
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="relative h-7 w-7 opacity-70 text-muted-foreground transition-opacity hover:text-foreground group-hover:opacity-100"
-                            onClick={async () => {
-                              await onSetStarred(todo.id, !todo.starred)
-                            }}
-                            aria-label={todo.starred ? t('todo.removeFromFavorites', { title: todo.title }) : t('todo.addToFavorites', { title: todo.title })}
-                          >
-                            <Star
-                              className={cn(
-                                'h-3.5 w-3.5',
-                                todo.starred ? 'fill-foreground text-foreground' : 'text-muted-foreground',
-                              )}
-                            />
-                            {effectiveSelectedTodoId === todo.id && editingId === null ? (
-                              <ShortcutHint shortcut="F" className="absolute -right-1 top-7" />
-                            ) : null}
-                          </Button>
-                          <AnimatePresence>
-                            {isCompleting ? (
-                              <motion.div
-                                className="relative z-10 ml-1 flex h-7 shrink-0 items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/15 px-2 text-xs font-medium text-emerald-700 dark:text-emerald-200"
-                                initial={{ opacity: 0, x: 8, scale: 0.96 }}
-                                animate={{ opacity: 1, x: 0, scale: 1 }}
-                                exit={{ opacity: 0, x: 8, scale: 0.96 }}
-                                transition={{ type: 'spring', stiffness: 520, damping: 32 }}
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                {t('common.done')}
-                              </motion.div>
-                            ) : null}
-                          </AnimatePresence>
-                        </motion.div>
                         </SortableTodoItem>,
                       )
                     }
@@ -970,7 +1033,7 @@ export function TodoList({
 
                     return rows
                   })}
-                </AnimatePresence>
+                </>
               )}
 
               <li className="mt-3 px-2 pt-1">
@@ -991,24 +1054,16 @@ export function TodoList({
                   <li className="px-4 py-3 text-sm text-muted-foreground">{t('todo.noCompletedTasks')}</li>
                 ) : (
                   <>
-                    <AnimatePresence initial={false}>
                       {visibleCompletedItems.map(({ todo, depth }) => {
                         const leftOffset = Math.min(depth, 6) * 16
 
                         return (
-                          <motion.li
+                          <li
                             key={`completed-${todo.id}`}
-                            layout
-                            initial={{ opacity: 0, y: 8, scale: 0.985 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, x: 10, scale: 0.96 }}
-                            transition={{ type: 'spring', stiffness: 580, damping: 38, mass: 0.5 }}
                             className="px-2 py-1"
                             style={leftOffset > 0 ? { paddingLeft: `${leftOffset + 8}px` } : undefined}
                           >
-                            <motion.div
-                              layout
-                              layoutId={`todo-card-${todo.id}`}
+                            <div
                               className="group flex items-start gap-2 rounded-md border border-transparent px-2 py-1.5 transition-colors hover:border-border/80 hover:bg-card"
                             >
                               <Checkbox
@@ -1104,11 +1159,10 @@ export function TodoList({
                                   )}
                                 />
                               </Button>
-                            </motion.div>
-                          </motion.li>
+                            </div>
+                          </li>
                         )
                       })}
-                    </AnimatePresence>
 
                     {hasMoreCompleted ? (
                       <li className="px-3 pb-2 pt-1">
@@ -1127,7 +1181,6 @@ export function TodoList({
                 )
               ) : null}
             </ul>
-          </LayoutGroup>
         </SortableContext>
         
         <DragOverlay dropAnimation={{

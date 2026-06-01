@@ -42,7 +42,8 @@ pub fn replace_registered_shortcut(
             if normalized != DEFAULT_GLOBAL_SHORTCUT {
                 log::warn!(
                     "failed to register global shortcut '{}', falling back to '{}'",
-                    normalized, DEFAULT_GLOBAL_SHORTCUT
+                    normalized,
+                    DEFAULT_GLOBAL_SHORTCUT
                 );
                 if let Err(fallback_error) = attach_shortcut(app, DEFAULT_GLOBAL_SHORTCUT) {
                     log::error!(

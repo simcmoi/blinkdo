@@ -47,7 +47,10 @@ fn ensure_column(conn: &Connection, table: &str, column: &str, definition: &str)
         .any(|name| name == column);
 
     if !exists {
-        conn.execute(&format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"), [])?;
+        conn.execute(
+            &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
+            [],
+        )?;
     }
 
     Ok(())
@@ -75,9 +78,7 @@ fn load_settings(conn: &Connection) -> SqlResult<Settings> {
         return Ok(Settings::default());
     }
 
-    serde_json::from_str(&json).map_err(|e| {
-        rusqlite::Error::ToSqlConversionFailure(Box::new(e))
-    })
+    serde_json::from_str(&json).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
 }
 
 fn load_todos(conn: &Connection) -> SqlResult<Vec<Todo>> {
@@ -97,18 +98,18 @@ fn load_todos(conn: &Connection) -> SqlResult<Vec<Todo>> {
                 parent_id: row.get(3)?,
                 list_id: row.get(4)?,
                 starred: row.get::<_, i64>(5)? != 0,
-                priority: serde_json::from_str(&format!("\"{}\"", priority_str))
-                    .unwrap_or_else(|e| {
+                priority: serde_json::from_str(&format!("\"{}\"", priority_str)).unwrap_or_else(
+                    |e| {
                         log::warn!("failed to parse priority '{}': {e}", priority_str);
                         TodoPriority::None
-                    }),
+                    },
+                ),
                 status: {
                     let status_str: String = row.get(7)?;
-                    serde_json::from_str(&format!("\"{}\"", status_str))
-                        .unwrap_or_else(|e| {
-                            log::warn!("failed to parse status '{}': {e}", status_str);
-                            TodoStatus::Todo
-                        })
+                    serde_json::from_str(&format!("\"{}\"", status_str)).unwrap_or_else(|e| {
+                        log::warn!("failed to parse status '{}': {e}", status_str);
+                        TodoStatus::Todo
+                    })
                 },
                 label_id: row.get(8)?,
                 sort_index: row.get(9)?,
@@ -131,9 +132,8 @@ pub fn save(conn: &Connection, data: &AppData) -> SqlResult<()> {
 }
 
 fn save_settings(conn: &Connection, settings: &Settings) -> SqlResult<()> {
-    let json = serde_json::to_string(settings).map_err(|e| {
-        rusqlite::Error::ToSqlConversionFailure(Box::new(e))
-    })?;
+    let json = serde_json::to_string(settings)
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
     conn.execute(
         "INSERT OR REPLACE INTO settings (key, value) VALUES ('app_settings', ?1)",
         params![json],

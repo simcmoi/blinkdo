@@ -389,10 +389,11 @@ fn normalize_data(mut data: AppData) -> AppData {
 }
 
 fn app_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app.path().app_data_dir()
+    let dir = app
+        .path()
+        .app_data_dir()
         .map_err(|e| format!("failed to resolve appDataDir: {e}"))?;
-    fs::create_dir_all(&dir)
-        .map_err(|e| format!("failed to create appDataDir: {e}"))?;
+    fs::create_dir_all(&dir).map_err(|e| format!("failed to create appDataDir: {e}"))?;
     Ok(dir)
 }
 
@@ -419,8 +420,7 @@ fn migrate_json_to_sqlite(app: &AppHandle, conn: &rusqlite::Connection) -> Resul
         .map_err(|e| format!("failed to parse {}: {e}", json_p.display()))?;
 
     let normalized = normalize_data(data);
-    db::save(conn, &normalized)
-        .map_err(|e| format!("failed to write SQLite: {e}"))?;
+    db::save(conn, &normalized).map_err(|e| format!("failed to write SQLite: {e}"))?;
 
     fs::rename(&json_p, json_p.with_extension("json.bak"))
         .map_err(|e| format!("failed to backup JSON file: {e}"))?;
@@ -443,8 +443,7 @@ pub fn load_or_create(app: &AppHandle) -> Result<AppData, String> {
     // If empty, initialize with defaults
     if data.settings.lists.is_empty() || data.todos.is_empty() {
         let default_data = AppData::default();
-        db::save(&conn, &default_data)
-            .map_err(|e| format!("failed to save defaults: {e}"))?;
+        db::save(&conn, &default_data).map_err(|e| format!("failed to save defaults: {e}"))?;
         return Ok(default_data);
     }
 

@@ -1,7 +1,10 @@
 use std::collections::{HashMap, HashSet};
 use tauri::{AppHandle, State};
 
-use crate::storage::{normalize_shortcut, now_millis, persist, AppData, AppState, Settings, Todo, TodoLabel, TodoList, DEFAULT_LIST_ID};
+use crate::storage::{
+    normalize_shortcut, now_millis, persist, AppData, AppState, Settings, Todo, TodoLabel,
+    TodoList, DEFAULT_LIST_ID,
+};
 
 pub fn lock_error(name: &str) -> String {
     format!("failed to lock {name} state")
@@ -16,14 +19,22 @@ pub fn persist_state(app: &AppHandle, state: &State<'_, AppState>) -> Result<App
 pub fn normalize_optional_text(value: Option<String>) -> Option<String> {
     value.and_then(|raw| {
         let trimmed = raw.trim();
-        if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
     })
 }
 
 pub fn normalize_optional_id(value: Option<String>) -> Option<String> {
     value.and_then(|raw| {
         let trimmed = raw.trim();
-        if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
     })
 }
 
@@ -47,14 +58,24 @@ pub fn sanitize_settings(mut settings: Settings) -> Settings {
 
     for (index, list) in settings.lists.iter_mut().enumerate() {
         list.name = if list.name.trim().is_empty() {
-            if index == 0 { "Mes tâches".to_string() } else { "Nouvelle liste".to_string() }
+            if index == 0 {
+                "Mes tâches".to_string()
+            } else {
+                "Nouvelle liste".to_string()
+            }
         } else {
             list.name.trim().to_string()
         };
     }
 
-    if !settings.lists.iter().any(|list| list.id == settings.active_list_id) {
-        settings.active_list_id = settings.lists.first()
+    if !settings
+        .lists
+        .iter()
+        .any(|list| list.id == settings.active_list_id)
+    {
+        settings.active_list_id = settings
+            .lists
+            .first()
             .map(|list| list.id.clone())
             .unwrap_or_else(|| DEFAULT_LIST_ID.to_string());
     }
@@ -69,7 +90,11 @@ pub fn sanitize_settings(mut settings: Settings) -> Settings {
         let mut used_label_ids = HashSet::new();
         for (index, label) in settings.labels.iter_mut().enumerate() {
             let fallback_name = format!("Label {}", index + 1);
-            label.name = if label.name.trim().is_empty() { fallback_name } else { label.name.trim().to_string() };
+            label.name = if label.name.trim().is_empty() {
+                fallback_name
+            } else {
+                label.name.trim().to_string()
+            };
             label.color = normalize_label_color(&label.color);
 
             let mut label_id = if label.id.trim().is_empty() {
@@ -94,16 +119,23 @@ pub fn collect_subtree_ids(todos: &[Todo], root_id: &str) -> HashSet<String> {
     let mut children_by_parent: HashMap<&str, Vec<&str>> = HashMap::new();
     for todo in todos {
         if let Some(parent_id) = todo.parent_id.as_deref() {
-            children_by_parent.entry(parent_id).or_default().push(todo.id.as_str());
+            children_by_parent
+                .entry(parent_id)
+                .or_default()
+                .push(todo.id.as_str());
         }
     }
 
     let mut stack = vec![root_id];
     let mut visited = HashSet::new();
     while let Some(current) = stack.pop() {
-        if !visited.insert(current.to_string()) { continue; }
+        if !visited.insert(current.to_string()) {
+            continue;
+        }
         if let Some(children) = children_by_parent.get(current) {
-            for child_id in children { stack.push(child_id); }
+            for child_id in children {
+                stack.push(child_id);
+            }
         }
     }
     visited
@@ -118,7 +150,9 @@ pub fn push_todo(
     list_id: Option<String>,
 ) -> Result<(), String> {
     let trimmed_title = title.trim();
-    if trimmed_title.is_empty() { return Ok(()); }
+    if trimmed_title.is_empty() {
+        return Ok(());
+    }
 
     let normalized_details = normalize_optional_text(details);
     let normalized_parent_id = normalize_optional_id(parent_id);
@@ -126,16 +160,29 @@ pub fn push_todo(
 
     let mut guard = state.data.lock().map_err(|_| lock_error("todo"))?;
     let target_list_id = normalized_list_id
-        .filter(|candidate| guard.settings.lists.iter().any(|list| list.id == *candidate))
+        .filter(|candidate| {
+            guard
+                .settings
+                .lists
+                .iter()
+                .any(|list| list.id == *candidate)
+        })
         .unwrap_or_else(|| guard.settings.active_list_id.clone());
 
     let validated_parent_id = normalized_parent_id.and_then(|candidate_parent| {
-        guard.todos.iter()
-            .find(|todo| todo.id == candidate_parent && todo.list_id.as_deref() == Some(target_list_id.as_str()))
+        guard
+            .todos
+            .iter()
+            .find(|todo| {
+                todo.id == candidate_parent
+                    && todo.list_id.as_deref() == Some(target_list_id.as_str())
+            })
             .map(|todo| todo.id.clone())
     });
 
-    let next_sort_index = guard.todos.iter()
+    let next_sort_index = guard
+        .todos
+        .iter()
         .filter(|todo| {
             todo.list_id.as_deref() == Some(target_list_id.as_str())
                 && todo.parent_id.as_deref() == validated_parent_id.as_deref()

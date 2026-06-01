@@ -81,7 +81,7 @@ pub fn show_overlay_window(app: &AppHandle) -> tauri::Result<()> {
         Some(win) => {
             was_existing_overlay = true;
             win
-        },
+        }
         None => create_overlay_window(app)?,
     };
 
@@ -123,10 +123,9 @@ pub fn show_overlay_window(app: &AppHandle) -> tauri::Result<()> {
         } else {
             OVERLAY_WIDTH
         };
-        let max_width =
-            (work_area_size.width - OVERLAY_RIGHT_MARGIN - OVERLAY_SAFE_AREA_PADDING)
-                .min(OVERLAY_MAX_WIDTH)
-                .max(OVERLAY_MIN_WIDTH);
+        let max_width = (work_area_size.width - OVERLAY_RIGHT_MARGIN - OVERLAY_SAFE_AREA_PADDING)
+            .min(OVERLAY_MAX_WIDTH)
+            .max(OVERLAY_MIN_WIDTH);
         let width = current_width.clamp(OVERLAY_MIN_WIDTH, max_width);
         let height = (work_area_size.height - (OVERLAY_SAFE_AREA_PADDING * 2.0)).max(360.0);
         let x = work_area_pos.x + work_area_size.width - width - OVERLAY_RIGHT_MARGIN;

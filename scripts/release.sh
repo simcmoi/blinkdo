@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script de release automatique pour Todo Overlay
+# Script de release automatique pour BlinkDo
 # Usage: npm run release [patch|minor|major]
 # Par défaut: patch (0.2.1 → 0.2.2)
 
@@ -98,7 +98,7 @@ fi
 
 # Commit des changements
 echo -e "${BLUE}💾 Commit des changements...${NC}"
-git add package.json src-tauri/tauri.conf.json CHANGELOG.md 2>/dev/null || git add package.json src-tauri/tauri.conf.json
+git add package.json package-lock.json src-tauri/tauri.conf.json CHANGELOG.md 2>/dev/null || git add package.json package-lock.json src-tauri/tauri.conf.json
 git commit -m "chore: release v$NEW_VERSION"
 
 # Créer le tag
@@ -115,7 +115,7 @@ echo -e "${GREEN}✨ Release v$NEW_VERSION créée avec succès !${NC}"
 echo ""
 echo -e "${BLUE}📋 Prochaines étapes:${NC}"
 echo -e "  1. GitHub Actions va compiler les binaires (5-10 minutes)"
-echo -e "  2. Vérifie le build: ${YELLOW}https://github.com/simcmoi/todo-overlay/actions${NC}"
-echo -e "  3. La release sera publiée: ${YELLOW}https://github.com/simcmoi/todo-overlay/releases${NC}"
-echo -e "  4. La landing page sera mise à jour automatiquement: ${YELLOW}https://simcmoi.github.io/todo-overlay/${NC}"
+echo -e "  2. Vérifie le build: ${YELLOW}https://github.com/simcmoi/blinkdo/actions${NC}"
+echo -e "  3. La release sera publiée: ${YELLOW}https://github.com/simcmoi/blinkdo/releases${NC}"
+echo -e "  4. La landing page sera mise à jour automatiquement: ${YELLOW}https://simcmoi.github.io/blinkdo/${NC}"
 echo ""

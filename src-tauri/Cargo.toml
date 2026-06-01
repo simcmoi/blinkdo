@@ -1,6 +1,6 @@
 [package]
 name = "blinkdo"
-version = "0.3.0"
+version = "0.3.1"
 description = "Your todos appear in the blink of an eye - lightning-fast todo app with instant keyboard access"
 authors = ["Simon Fessy"]
 license = "MIT"

@@ -7,6 +7,26 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.3.1] - 2026-06-01
+
+### Ajouté
+- Vue Kanban avec statuts de tâches et déplacement par drag and drop entre colonnes.
+- Indices de raccourcis clavier contextuels dans l'interface.
+- Documentation README clarifiant la CI, la release et la génération des installateurs.
+
+### Modifié
+- Expérience overlay "Blink focus" optimisée pour une utilisation rapide au clavier.
+- Redimensionnement automatique de la fenêtre selon la vue active : liste, Kanban ou réglages.
+- Overlay positionné dans la zone utile du système pour éviter la barre de menu, le Dock macOS et la barre des tâches Windows.
+- Contour d'overlay plus propre avec fond transparent, coins arrondis et panneau interne plus net.
+- Workflow de release renforcé pour réutiliser une release existante et publier les bons assets.
+
+### Corrigé
+- Suppression des mouvements de layout lors du passage d'une tâche en mode édition.
+- Feedback visuel de validation de tâche plus lisible.
+- Correction des erreurs CI `cargo fmt` et Clippy.
+- Alignement des branches `main` et `staging` sur la même base de release.
+
 ## [0.2.7] - 2026-02-26
 
 ### Ajouté

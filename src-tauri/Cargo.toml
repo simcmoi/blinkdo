@@ -33,7 +33,7 @@ tauri-plugin-updater = "2"
 tauri-plugin-shell = "2"
 uuid = { version = "1.18.1", features = ["v4", "fast-rng"] }
 reqwest = { version = "0.13", features = ["json"] }
-rusqlite = { version = "0.35", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"
